@@ -19,6 +19,7 @@ import re
 # The above is commented out because it's not needed yet. We will probably need it in the future though.
 # Python image library (PIL) used to require a slightly older version of Python -- it may still -- so if and when we need it,
 # Just set your interpreter to the version compatible (VSCode should be able to install the right version)
+# Don't forget you also have to download PIL. It doesn't come with Python.
 
 # General Global Vars
 defaultProductFile = "DatabaseFiles/default.txt" # Do not change this! If we want to change files, use the InventoryHandler's functions!
