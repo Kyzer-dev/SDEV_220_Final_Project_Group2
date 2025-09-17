@@ -63,7 +63,7 @@ class InventoryHandler:
         self.productList = []
         self.addonList = []
 
-    def loadProductFile(self, newFilePath, mode):
+    def loadDataFile(self, newFilePath, mode):
         productCount = int(0)
         tempDict = {}
         try:
@@ -96,11 +96,11 @@ class InventoryHandler:
                     tempDict[tempLine[0]] = tempLine[1] # Make a new key and set it to the previously made tempLine's 0 and 1 indices.
                         
                 if productCount == 0: # If our database file has no products (no lines start with 'prodID='), throw an error
-                    errorPopup(2, InvHandler, "InvHandler.loadProductFile()", "Database file was found, but there are no products in it (no lines start with 'prodID=000')")
+                    errorPopup(2, InvHandler, "InvHandler.loadDataFile()", "Database file was found, but there are no products in it (no lines start with 'prodID=000')")
                 print(productCount, mode + "s detected.") # Debug purposes
 
         except FileNotFoundError: # If we don't find the file specified and/or invalid
-            errorPopup(1, InvHandler, "InvHandler.loadProductFile()", "Database file not found in the provided path or is invalid. If you didn't specify a path, that means the 'default.txt' database file in the 'DatabaseFiles' folder is missing.")
+            errorPopup(1, InvHandler, "InvHandler.loadDataFile()", "Database file not found in the provided path or is invalid. If you didn't specify a path, that means the 'default.txt' database file in the 'DatabaseFiles' folder is missing.")
 
     def makeNewProduct(self, passedDict, mode):
         # We make a new Product class object
@@ -135,13 +135,13 @@ class InventoryHandler:
 # Non-Class Functions (defs)
 def errorPopup(severity=0, perpetrator="Unspecified Perpetrator", perpetrator_where="?", message="?"):
     # You don't technically require anything to use this function, but please do proper error handling.
-    # See class InventoryHandler > def loadProductFile > try & except for an example of how to use this.
+    # See class InventoryHandler > def loadDataFile > try & except for an example of how to use this.
     newMessage = str(str(perpetrator) + "\nProblem at function: " + perpetrator_where + "\nMessage: " + message)
     messagebox.showerror(errorSeverity[severity], newMessage) 
 
 if __name__ == "__main__":
     InvHandler = InventoryHandler()
-    InvHandler.loadProductFile(defaultProductFile, "Product")
-    InvHandler.loadProductFile(defaultAddonFile, "Addon")
+    InvHandler.loadDataFile(defaultProductFile, "Product")
+    InvHandler.loadDataFile(defaultAddonFile, "Addon")
     InvHandler.learningHelper("Product")
     InvHandler.learningHelper("Addon")
