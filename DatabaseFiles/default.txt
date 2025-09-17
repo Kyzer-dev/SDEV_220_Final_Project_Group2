@@ -1,0 +1,64 @@
+// HOW TO USE THIS FILE
+//
+// < THESE DOUBLE FORWARD SLASHES SIGNIFY COMMENTS AND ARE IGNORED
+//
+// We store product data across multiple lines. The app reads data for a product starting at
+// a prodID=### tag and ends once it detects another prodID=### tag.
+//
+// Why do we do this? We do this for readability and expanding our options to add in-tag tags.
+// For example, a '|' symbol is used to add line breaks for product descriptions.
+// Replace '|' with '\n' in the front end when displaying descriptions.
+// Additionally, it helps when we identify paths to product images.
+//
+// The order of an items' tags does NOT matter as long as its prodID is first!
+// 
+// prodID=001 // Int; must come first; required!
+// prodName=Cheeseburger // String, required.
+// prodDesc=A cheeseburger, ground beef burger with cheese on a bun.|Grilled to perfection. // String; '|' character allows line breaks for better display. Not required.
+// prodPrice=4.99 // Float, Required
+// prodStock=200 // Int (decided it was probably for the best, but we can change it back; look at the Product and Addon Class. Required.
+// prodSales=300 // Int; required.
+// prodBasedOn=000 // Int, one only; this is so the system can possibly nest things in the front end OR have things be removed mid-order! Not required.
+// prodPresetAddons=000 // Addons by default; searches for the ID's in the default_addons.txt file. Not required.
+// prodValidAddons=000,001,002,003,004 // Addons which can be added; searches for the ID's in the default_addons.txt file.
+// prodImg=Images/Food/burger_big.png // String; a filepath, including image extension. Can be left blank.
+// prodImgSmall=Images/Food/burger.png // String; a filepath, including image extension. Can be left blank.
+//
+
+prodID=000
+prodName=Burger
+prodDesc=A plain, ground beef burger on a bun.|Grilled to perfection.
+prodPrice=4.99
+prodStock=200
+prodSales=300
+prodBasedOn=
+prodPresetAddons=
+prodValidAddons=000,001,002,003,004
+prodImg=
+prodImgSmall=
+
+prodID=001
+prodName=Cheeseburger
+prodDesc=A ground beef burger grilled to perfection with cheese.
+prodPrice=5.49
+prodStock=200
+prodSales=400
+prodBasedOn=000
+prodPresetAddons=000
+prodValidAddons=000,001,002,003,004
+prodImg=
+prodImgSmall=
+
+prodID=002
+prodName=Tag Order Doesn't Matter Burger
+prodPrice=2.99
+prodBasedOn=000
+prodDesc=Since we use a dictionary, the order of tags doesn't matter.|You should still do it in the right order, though!
+prodStock=300
+prodSales=3000
+prodPresetAddons=000,002
+prodValidAddons=000,001,002,003,004
+prodImg=
+prodImgSmall=
+
+end_of_file

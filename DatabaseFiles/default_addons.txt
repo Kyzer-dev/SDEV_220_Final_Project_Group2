@@ -1,0 +1,55 @@
+// HOW TO USE THIS FILE
+//
+// < THESE DOUBLE FORWARD SLASHES SIGNIFY COMMENTS AND ARE IGNORED
+//
+// This file more or less functions the same as the regular products database file.
+// We keep addons in a separate file to keep their prodID's from skewing the regular products.
+//
+// Reminder that we use '|' for line breaks (replace it with '\n' on the front end)
+
+prodID=000
+prodName=Cheese
+prodDesc=Slice of cheese.
+prodPrice=0.50
+prodStock=200
+prodSales=400
+prodImg=
+prodImgSmall=
+
+prodID=001
+prodName=Ketchup
+prodDesc=A squirt of ketchup.
+prodPrice=0
+prodStock=2000
+prodSales=1000
+prodImg=
+prodImgSmall=
+
+prodID=002
+prodName=Mustard
+prodDesc=A squirt of mustard.
+prodPrice=0
+prodStock=2000
+prodSales=1000
+prodImg=
+prodImgSmall=
+
+prodID=003
+prodName=Mayonnaise 
+prodDesc=A squirt of mayonnaise.
+prodPrice=0
+prodStock=2000
+prodSales=1000
+prodImg=
+prodImgSmall=
+
+prodID=004
+prodName=Pickles
+prodDesc=Three pickles.
+prodPrice=0
+prodStock=1000
+prodSales=500
+prodImg=
+prodImgSmall=
+
+end_of_file
