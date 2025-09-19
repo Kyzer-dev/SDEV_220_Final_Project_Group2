@@ -133,6 +133,62 @@ class InventoryHandler:
                 elif addon.addonName == "Mustard":
                     print("Found a", addon.addonName, "at", index)
 
+#Update stock in memory and commit to file when order is finalized. 
+
+    def updateStock(self, prodID, amount):
+        # Adjust stock in memory. Positive adds, negative subtracts.
+        prodID = int(prodID)
+        for product in self.productList:
+            if product.prodID == prodID:
+                new_stock = product.prodStock + amount
+                if new_stock < 0:
+                    print(f"Not enough stock for {product.prodName}.")
+                    return False
+                product.prodStock = new_stock
+                print(f"Updated {product.prodName} stock to {product.prodStock}.")
+                return True
+        print(f"Product ID {prodID} not found.")
+        return False
+
+    def commitMultipleStock(self, prodIDs):
+        
+        #Update the prodStock= lines for multiple product IDs at once.
+        
+        # Convert all IDs to ints
+        prodIDs = [int(pid) for pid in prodIDs]
+
+        # Build a dict of productID -> new stock in memory
+        stock_map = {p.prodID: p.prodStock for p in self.productList if p.prodID in prodIDs}
+
+        try:
+            with open(self.productFilePath, "r") as f:
+                lines = f.readlines()
+
+            in_product = None
+            for i, line in enumerate(lines):
+                # Detect product start
+                if line.startswith("prodID="):
+                    current_id = int(line.strip().split("=")[1])
+                    if current_id in stock_map:
+                        in_product = current_id
+                    else:
+                        in_product = None
+                elif line.startswith("end_of_file"):
+                    in_product = None
+
+                # Update stock line if inside a tracked product
+                if in_product is not None and line.startswith("prodStock="):
+                    lines[i] = f"prodStock={stock_map[in_product]}\n"
+
+            with open(self.productFilePath, "w") as f:
+                f.writelines(lines)
+
+            print(f"Stock committed for products: {', '.join(map(str, stock_map.keys()))}")
+            return True
+        except Exception as e:
+            print("Error committing multiple stock:", e)
+            return False
+
 # Non-Class Functions (defs)
 def errorPopup(severity=0, perpetrator="Unspecified Perpetrator", perpetrator_where="?", message="?"):
     # You don't technically require anything to use this function, but please do proper error handling.
@@ -140,9 +196,14 @@ def errorPopup(severity=0, perpetrator="Unspecified Perpetrator", perpetrator_wh
     newMessage = str(str(perpetrator) + "\nProblem at function: " + perpetrator_where + "\nMessage: " + message)
     messagebox.showerror(errorSeverity[severity], newMessage) 
 
+
 if __name__ == "__main__":
     InvHandler = InventoryHandler()
     InvHandler.loadDataFile(defaultProductFile, "Product")
     InvHandler.loadDataFile(defaultAddonFile, "Addon")
     InvHandler.learningHelper("Product")
     InvHandler.learningHelper("Addon")
+    InvHandler.updateStock("000", 2) # Example of adding 2 to the stock of product ID 000
+    InvHandler.updateStock("001", -2) # Example of adding 2 to the stock of product ID 001
+    InvHandler.updateStock("002", -6) # Example of subtracting 1 from the stock of product ID 003
+    InvHandler.commitMultipleStock(["000", "001", "002"]) # This writes the stock changes back to the file.
