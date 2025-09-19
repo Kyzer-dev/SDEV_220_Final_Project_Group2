@@ -25,11 +25,11 @@
 // prodImgSmall=Images/Food/burger.png // String; a filepath, including image extension. Can be left blank.
 //
 
-prodID=000
+prodID=0
 prodName=Burger
 prodDesc=A plain, ground beef burger on a bun.|Grilled to perfection.
 prodPrice=4.99
-prodStock=200
+prodStock=202
 prodSales=300
 prodBasedOn=
 prodPresetAddons=
@@ -37,25 +37,25 @@ prodValidAddons=000,001,002,003,004
 prodImg=
 prodImgSmall=
 
-prodID=001
+prodID=1
 prodName=Cheeseburger
 prodDesc=A ground beef burger grilled to perfection with cheese.
 prodPrice=5.49
-prodStock=200
+prodStock=198
 prodSales=400
-prodBasedOn=000
+prodBasedOn=0
 prodPresetAddons=000
 prodValidAddons=000,001,002,003,004
 prodImg=
 prodImgSmall=
 
-prodID=002
+prodID=2
 prodName=Tag Order Doesn't Matter Burger
-prodPrice=2.99
-prodBasedOn=000
 prodDesc=Since we use a dictionary, the order of tags doesn't matter.|You should still do it in the right order, though!
-prodStock=300
+prodPrice=2.99
+prodStock=294
 prodSales=3000
+prodBasedOn=0
 prodPresetAddons=000,002
 prodValidAddons=000,001,002,003,004
 prodImg=
