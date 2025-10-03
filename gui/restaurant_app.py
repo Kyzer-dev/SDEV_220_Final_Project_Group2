@@ -10,13 +10,17 @@ Category buttons are just filler (no category field yet). 'All' just reloads eve
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional
+import customtkinter as ctk
 
 from models import Inventory, Order
+
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
 
 class RestaurantApp:
     TAX_RATE = 0.07
 
-    def __init__(self, root: tk.Tk, inventory: Inventory):
+    def __init__(self, root: ctk.CTk, inventory: Inventory):
         self.root = root
         self.root.title("Restaurant Ordering System")
         self.inventory = inventory
@@ -41,19 +45,19 @@ class RestaurantApp:
 
     # ---------------- Layout ----------------
     def build_layout(self):
-        top_frame = tk.Frame(self.root, pady=8)
-        top_frame.pack(fill='x')
-        tk.Label(top_frame, text="Restaurant Ordering System", font=("Arial", 20, "bold")).pack()
+        top_frame = ctk.CTkFrame(self.root)
+        top_frame.pack(fill='x', pady=8, padx=8)
+        ctk.CTkLabel(top_frame, text="Restaurant Ordering System", font=("Arial", 20, "bold")).pack()
 
-        main_frame = tk.Frame(self.root)
-        main_frame.pack(fill='both', expand=True)
+        main_frame = ctk.CTkFrame(self.root)
+        main_frame.pack(fill='both', expand=True, padx=8, pady=8)
 
-        left_frame = tk.Frame(main_frame, padx=5, pady=5, bd=2, relief='groove')
-        left_frame.grid(row=0, column=0, sticky='nsew')
-        center_frame = tk.Frame(main_frame, padx=5, pady=5, bd=2, relief='groove')
-        center_frame.grid(row=0, column=1, sticky='nsew')
-        right_frame = tk.Frame(main_frame, padx=5, pady=5, bd=2, relief='groove')
-        right_frame.grid(row=0, column=2, sticky='nsew')
+        left_frame = ctk.CTkFrame(main_frame)
+        left_frame.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+        center_frame = ctk.CTkFrame(main_frame)
+        center_frame.grid(row=0, column=1, sticky='nsew', padx=5, pady=5)
+        right_frame = ctk.CTkFrame(main_frame)
+        right_frame.grid(row=0, column=2, sticky='nsew', padx=5, pady=5)
 
         main_frame.columnconfigure(0, weight=2)
         main_frame.columnconfigure(1, weight=3)
@@ -61,15 +65,15 @@ class RestaurantApp:
         main_frame.rowconfigure(0, weight=1)
 
         # Left: categories and menu list
-        cat_frame = tk.Frame(left_frame)
+        cat_frame = ctk.CTkFrame(left_frame)
         cat_frame.pack(fill='x', pady=(0, 5))
-        tk.Label(cat_frame, text="Categories:").pack(anchor='w')
+        ctk.CTkLabel(cat_frame, text="Categories:").pack(anchor='w')
         # Category buttons are placeholders; product records currently have no category metadata.
         for cat in ["All"]:
-            tk.Button(cat_frame, text=cat, width=10, command=lambda c=cat: self.filter_category(c)).pack(side='left', padx=2)
+            ctk.CTkButton(cat_frame, text=cat, width=10, command=lambda c=cat: self.filter_category(c)).pack(side='left', padx=2)
 
-        menu_frame = tk.Frame(left_frame)
-        menu_frame.pack(fill='both', expand=True)
+        menu_frame = ctk.CTkFrame(left_frame)
+        menu_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.menu_tree = ttk.Treeview(menu_frame, columns=("id", "name", "price", "stock"), show='headings', height=12)
         for col, text, w in [("id", "ID", 40), ("name", "Name", 140), ("price", "Price", 70), ("stock", "Stock", 60)]:
             self.menu_tree.heading(col, text=text)
@@ -80,18 +84,18 @@ class RestaurantApp:
         self.menu_tree.configure(yscrollcommand=menu_scroll.set)
         menu_scroll.pack(side='right', fill='y')
 
-        qty_frame = tk.Frame(left_frame, pady=5)
-        qty_frame.pack(fill='x')
-        tk.Label(qty_frame, text="Qty:").pack(side='left')
-        self.quantity_entry = tk.Entry(qty_frame, width=5)
+        qty_frame = ctk.CTkFrame(left_frame)
+        qty_frame.pack(fill='x', pady=5, padx=5)
+        ctk.CTkLabel(qty_frame, text="Qty:").pack(side='left', padx=5)
+        self.quantity_entry = ctk.CTkEntry(qty_frame, width=5)
         self.quantity_entry.insert(0, "1")
         self.quantity_entry.pack(side='left', padx=4)
-        tk.Button(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
+        ctk.CTkButton(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
 
         # Center: order tree, buttons and totals
-        tk.Label(center_frame, text="Current Order", font=("Arial", 14, "bold")).pack(anchor='w')
-        order_tree_frame = tk.Frame(center_frame)
-        order_tree_frame.pack(fill='both', expand=True)
+        ctk.CTkLabel(center_frame, text="Current Order", font=("Arial", 14, "bold")).pack(anchor='w')
+        order_tree_frame = ctk.CTkFrame(center_frame)
+        order_tree_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.order_tree = ttk.Treeview(order_tree_frame, columns=("name", "qty", "price", "subtotal"), show='headings', height=14)
         self.order_tree.heading("name", text="Item")
         self.order_tree.heading("qty", text="Qty")
@@ -107,22 +111,22 @@ class RestaurantApp:
         self.order_tree.configure(yscrollcommand=order_scroll.set)
         order_scroll.pack(side='right', fill='y')
 
-        btn_frame = tk.Frame(center_frame, pady=5)
-        btn_frame.pack(fill='x')
-        tk.Button(btn_frame, text="Remove Last Item", command=self.remove_last_item).pack(side='left')
-        tk.Button(btn_frame, text="Checkout", command=self.checkout_popup).pack(side='left', padx=5)
-        tk.Button(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
+        btn_frame = ctk.CTkFrame(center_frame)
+        btn_frame.pack(fill='x', pady=5, padx=5)
+        ctk.CTkButton(btn_frame, text="Remove Last Item", command=self.remove_last_item).pack(side='left')
+        ctk.CTkButton(btn_frame, text="Checkout", command=self.checkout_popup).pack(side='left', padx=5)
+        ctk.CTkButton(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
 
-        totals_frame = tk.Frame(center_frame, pady=5)
-        totals_frame.pack(fill='x')
-        tk.Label(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
-        tk.Label(totals_frame, textvariable=self.tax_var).pack(anchor='e')
-        tk.Label(totals_frame, textvariable=self.total_var, font=("Arial", 12, "bold")).pack(anchor='e')
+        totals_frame = ctk.CTkFrame(center_frame)
+        totals_frame.pack(fill='x', pady=5, padx=5)
+        ctk.CTkLabel(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
+        ctk.CTkLabel(totals_frame, textvariable=self.tax_var).pack(anchor='e')
+        ctk.CTkLabel(totals_frame, textvariable=self.total_var, font=("Arial", 12, "bold")).pack(anchor='e')
 
         # Right: stock levels and actions
-        tk.Label(right_frame, text="Stock Levels", font=("Arial", 14, "bold")).pack(anchor='w')
-        stock_frame = tk.Frame(right_frame)
-        stock_frame.pack(fill='both', expand=True)
+        ctk.CTkLabel(right_frame, text="Stock Levels", font=("Arial", 14, "bold")).pack(anchor='w')
+        stock_frame = ctk.CTkFrame(right_frame)
+        stock_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.stock_tree = ttk.Treeview(stock_frame, columns=("id", "name", "stock"), show='headings', height=12)
         self.stock_tree.heading("id", text="ID")
         self.stock_tree.heading("name", text="Name")
@@ -139,13 +143,13 @@ class RestaurantApp:
         self.stock_tree.tag_configure('low', background='#ffcccc')
         self.stock_tree.tag_configure('ok', background='#ccffcc')
 
-        right_btns = tk.Frame(right_frame, pady=5)
-        right_btns.pack(fill='x')
-        tk.Button(right_btns, text="Send to Kitchen", command=self.send_to_kitchen).pack(fill='x', pady=2)
-        tk.Button(right_btns, text="Hold Order", command=self.hold_order).pack(fill='x', pady=2)
-        tk.Button(right_btns, text="Cancel Order", command=self.cancel_order).pack(fill='x', pady=2)
-        tk.Button(right_btns, text="Load Menu", command=self.reload_menu).pack(fill='x', pady=2)
-        tk.Button(right_btns, text="Update Stock", command=self.update_stock_placeholder).pack(fill='x', pady=2)
+        right_btns = ctk.CTkFrame(right_frame)
+        right_btns.pack(fill='x', pady=5)
+        ctk.CTkButton(right_btns, text="Send to Kitchen", command=self.send_to_kitchen).pack(fill='x', pady=2)
+        ctk.CTkButton(right_btns, text="Hold Order", command=self.hold_order).pack(fill='x', pady=2)
+        ctk.CTkButton(right_btns, text="Cancel Order", command=self.cancel_order).pack(fill='x', pady=2)
+        ctk.CTkButton(right_btns, text="Load Menu", command=self.reload_menu).pack(fill='x', pady=2)
+        ctk.CTkButton(right_btns, text="Update Stock", command=self.update_stock_placeholder).pack(fill='x', pady=2)
 
     # --------------- Product / Stock ---------------
     def refresh_products(self):
@@ -243,12 +247,12 @@ class RestaurantApp:
         subtotal = self.order.total()
         tax = subtotal * self.TAX_RATE
         total = subtotal + tax
-        win = tk.Toplevel(self.root)
+        win = ctk.CTkToplevel(self.root)
         win.title("Checkout Confirmation")
-        tk.Label(win, text=f"Subtotal: ${subtotal:.2f}").pack(anchor='w')
-        tk.Label(win, text=f"Tax: ${tax:.2f}").pack(anchor='w')
-        tk.Label(win, text=f"Total: ${total:.2f}", font=("Arial", 12, 'bold')).pack(anchor='w', pady=(0,5))
-        tk.Label(win, text="Confirm checkout? This will reduce stock.").pack(anchor='w')
+        ctk.CTkLabel(win, text=f"Subtotal: ${subtotal:.2f}").pack(anchor='w')
+        ctk.CTkLabel(win, text=f"Tax: ${tax:.2f}").pack(anchor='w')
+        ctk.CTkLabel(win, text=f"Total: ${total:.2f}", font=("Arial", 12, 'bold')).pack(anchor='w', pady=(0,5))
+        ctk.CTkLabel(win, text="Confirm checkout? This will reduce stock.").pack(anchor='w')
 
         def confirm():
             for p, q in self.order.items:
@@ -268,10 +272,10 @@ class RestaurantApp:
             self.update_order_summary()
             win.destroy()
 
-        btns = tk.Frame(win)
+        btns = ctk.CTkFrame(win)
         btns.pack(pady=5)
-        tk.Button(btns, text="Confirm", command=confirm).pack(side='left', padx=5)
-        tk.Button(btns, text="Cancel", command=win.destroy).pack(side='left', padx=5)
+        ctk.CTkButton(btns, text="Confirm", command=confirm).pack(side='left', padx=5)
+        ctk.CTkButton(btns, text="Cancel", command=win.destroy).pack(side='left', padx=5)
 
     def print_receipt(self):
         if not self.order.items:

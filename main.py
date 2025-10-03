@@ -31,6 +31,12 @@ def run_gui():
         print(e)
         return
     try:
+        import customtkinter as ctk  # type: ignore
+    except Exception as e:  # pragma: no cover - environment specific
+        print("ERROR: Customtkinter is not available on this Python installation.")
+        print(e)
+        return
+    try:
         # Use package-qualified import so it works regardless of cwd.
         from gui.restaurant_app import RestaurantApp  # type: ignore
     except ModuleNotFoundError as e:
@@ -44,7 +50,7 @@ def run_gui():
         return
 
     inv = Inventory(); inv.load()
-    root = tk.Tk()
+    root = ctk.CTk()
     root.title("Restaurant Ordering System")
     try:
         _app = RestaurantApp(root, inv)
