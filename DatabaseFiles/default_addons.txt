@@ -52,4 +52,13 @@ prodSales=500
 prodImg=
 prodImgSmall=
 
+prodID=005
+prodName=Onions
+prodDesc=Onion Slices
+prodPrice=0.50
+prodStock=200
+prodSales=400
+prodImg=
+prodImgSmall=
+
 end_of_file
