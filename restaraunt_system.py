@@ -59,9 +59,10 @@ class Addon:
 
 class Order(Product, Addon):
     #this references stuff from the products and addons so they use the same variable names
-    def __init__(self, ordID, prodID, prodPrice, addID, addPrice, finalPrice):
+    def __init__(self, ordID, prodID, prodPrice, addID, addPrice, finalPrice, prodName="Unknown"):
         self.ordID = int(ordID)
         Product.prodID = int(prodID)
+        Product.prodName = str(prodName)
         Product.prodPrice = float(prodPrice)
         Addon.addonID = int(addID)
         Addon.addonPrice = float(addPrice)
@@ -69,6 +70,58 @@ class Order(Product, Addon):
 
         #Working on the calculation for the final price, this is all I have for now but I will continue to work on it
         finalPrice += prodPrice + addPrice
+
+#----------------------
+# print and file functions
+#--------------------
+
+
+    def printReceipt(self):
+        #Print a simple receipt for this order.
+        print("\n------ RECEIPT ------")
+        print(f"Order ID: {self.ordID}")
+        print(f"Product ID: {Product.prodID}, Price: ${Product.prodPrice:.2f}")
+        print(f"Product Name: {Product.prodName}")
+        print(f"Addon ID: {Addon.addonID}, Price: ${Addon.addonPrice:.2f}")
+        print(f"Total: ${self.finalPrice:.2f}")
+        print("---------------------\n")
+
+    def saveToFile(self, filePath="DatabaseFiles/orders.txt"):
+        #Save this order to a text file (append mode).
+        try:
+            with open(filePath, "a") as f:
+                f.write(f"ordID={self.ordID},prodID={Product.prodID},prodName={Product.prodName},prodPrice={Product.prodPrice},"
+                        f"addID={Addon.addonID},addPrice={Addon.addonPrice},finalPrice={self.finalPrice}\n")
+            print(f"Order {self.ordID} saved to {filePath}")
+        except Exception as e:
+            print("Error saving order:", e)
+
+    @staticmethod
+    def loadFromFile(filePath="DatabaseFiles/orders.txt"):
+        #Load all saved orders from a text file and return them as a list of Order objects.
+        orders = []
+        try:
+            with open(filePath, "r") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    parts = dict(item.split("=") for item in line.strip().split(","))
+                    order = Order(
+                        ordID=parts["ordID"],
+                        prodID=parts["prodID"],
+                        prodName=parts.get("prodName", "Unknown"), 
+                        prodPrice=parts["prodPrice"],
+                        addID=parts["addID"],
+                        addPrice=parts["addPrice"],
+                        finalPrice=parts["finalPrice"],
+                    )
+                    orders.append(order)
+            print(f"Loaded {len(orders)} orders from {filePath}")
+        except FileNotFoundError:
+            print(f"No order file found at {filePath}. Refreshing...")
+        except Exception as e:
+            print("Error loading orders:", e)
+        return orders
 
 class InventoryHandler:
     def __init__(self):
@@ -216,7 +269,23 @@ if __name__ == "__main__":
     InvHandler.loadDataFile(defaultAddonFile, "Addon")
     InvHandler.learningHelper("Product")
     InvHandler.learningHelper("Addon")
-    InvHandler.updateStock("000", 2) # Example of adding 2 to the stock of product ID 000
-    InvHandler.updateStock("001", -2) # Example of adding 2 to the stock of product ID 001
-    InvHandler.updateStock("002", -6) # Example of subtracting 1 from the stock of product ID 003
+
+    #example stock update and commit
+    InvHandler.updateStock("000", 0) # Example of adding/subtracting to the stock of product ID 000 (replace 0 with a -/+ interger to add/subtract stock)
+    InvHandler.updateStock("001", 0) # Example of adding/subtracting to the stock of product ID 001
+    InvHandler.updateStock("002", 0) # Example of subtracting/subtracintg from the stock of product ID 003
     InvHandler.commitMultipleStock(["000", "001", "002"]) # This writes the stock changes back to the file.
+
+
+    #example order creation
+    
+    #order1 = Order(ordID=1, prodID=0, prodPrice=4.99, addID=0, addPrice=1.50, finalPrice=6.49, prodName="Burger")
+    #order1.printReceipt()
+    #order1.saveToFile()
+
+    #load all orders from file
+
+    #all_orders = Order.loadFromFile()
+    #for o in all_orders:
+        #o.printReceipt()
+    
