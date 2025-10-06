@@ -3,10 +3,16 @@
 
 Course project: loads a text "database" of menu items and gives you a basic ordering GUI.
 
-![Restaurant Ordering System photo](image.png)
+Light Mode
+![Restaurant Ordering System photo (Light Mode)](image-2.png)
+
+Dark Mode
+![Restaurant Ordering System photo (Dark Mode)](image-1.png)
 
 This version of the application uses the CustomTkinter python library, you can find the documentation and more information about CustomTkinter here: https://customtkinter.tomschimansky.com/
 View the Github page here: https://github.com/tomschimansky/customtkinter
+
+To use the version that does not require CustomTkinter please check out the repository located here: https://github.com/hligon35/SDEV220.git
 
 ## Install CustomTkinter library with pip:
 
