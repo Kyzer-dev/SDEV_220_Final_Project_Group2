@@ -47,7 +47,7 @@ class RestaurantApp:
     def build_layout(self):
         top_frame = ctk.CTkFrame(self.root)
         top_frame.pack(fill='x', pady=8, padx=8)
-        ctk.CTkLabel(top_frame, text="Restaurant Ordering System", font=("Arial", 20, "bold")).pack()
+        ctk.CTkLabel(top_frame, text="Restaurant Ordering System", font=("Arial", 20, "bold")).pack(pady=8)
 
         main_frame = ctk.CTkFrame(self.root)
         main_frame.pack(fill='both', expand=True, padx=8, pady=8)
@@ -66,11 +66,11 @@ class RestaurantApp:
 
         # Left: categories and menu list
         cat_frame = ctk.CTkFrame(left_frame)
-        cat_frame.pack(fill='x', pady=(0, 5))
-        ctk.CTkLabel(cat_frame, text="Categories:").pack(anchor='w')
+        cat_frame.pack(fill='x', pady=(5, 10), padx=5)
+        ctk.CTkLabel(cat_frame, text="Categories:").pack(anchor='w', padx=5)
         # Category buttons are placeholders; product records currently have no category metadata.
         for cat in ["All"]:
-            ctk.CTkButton(cat_frame, text=cat, width=10, command=lambda c=cat: self.filter_category(c)).pack(side='left', padx=2)
+            ctk.CTkButton(cat_frame, text=cat, width=10, command=lambda c=cat: self.filter_category(c)).pack(side='left', padx=5, pady=5)
 
         menu_frame = ctk.CTkFrame(left_frame)
         menu_frame.pack(fill='both', expand=True, padx=5, pady=5)
@@ -87,13 +87,13 @@ class RestaurantApp:
         qty_frame = ctk.CTkFrame(left_frame)
         qty_frame.pack(fill='x', pady=5, padx=5)
         ctk.CTkLabel(qty_frame, text="Qty:").pack(side='left', padx=5)
-        self.quantity_entry = ctk.CTkEntry(qty_frame, width=5)
+        self.quantity_entry = ctk.CTkEntry(qty_frame, width=50)
         self.quantity_entry.insert(0, "1")
         self.quantity_entry.pack(side='left', padx=4)
-        ctk.CTkButton(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
+        ctk.CTkButton(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='right')
 
         # Center: order tree, buttons and totals
-        ctk.CTkLabel(center_frame, text="Current Order", font=("Arial", 14, "bold")).pack(anchor='w')
+        ctk.CTkLabel(center_frame, text="Current Order", font=("Arial", 14, "bold")).pack(anchor='w', padx=5, pady=5)
         order_tree_frame = ctk.CTkFrame(center_frame)
         order_tree_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.order_tree = ttk.Treeview(order_tree_frame, columns=("name", "qty", "price", "subtotal"), show='headings', height=14)
@@ -114,17 +114,17 @@ class RestaurantApp:
         btn_frame = ctk.CTkFrame(center_frame)
         btn_frame.pack(fill='x', pady=5, padx=5)
         ctk.CTkButton(btn_frame, text="Remove Last Item", command=self.remove_last_item).pack(side='left')
-        ctk.CTkButton(btn_frame, text="Checkout", command=self.checkout_popup).pack(side='left', padx=5)
-        ctk.CTkButton(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
+        ctk.CTkButton(btn_frame, text="Checkout", command=self.checkout_popup).pack(side='right')
+        ctk.CTkButton(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='right', padx=5)
 
         totals_frame = ctk.CTkFrame(center_frame)
         totals_frame.pack(fill='x', pady=5, padx=5)
-        ctk.CTkLabel(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
-        ctk.CTkLabel(totals_frame, textvariable=self.tax_var).pack(anchor='e')
-        ctk.CTkLabel(totals_frame, textvariable=self.total_var, font=("Arial", 12, "bold")).pack(anchor='e')
+        ctk.CTkLabel(totals_frame, textvariable=self.subtotal_var).pack(anchor='e', padx=5)
+        ctk.CTkLabel(totals_frame, textvariable=self.tax_var).pack(anchor='e', padx=5)
+        ctk.CTkLabel(totals_frame, textvariable=self.total_var, font=("Arial", 12, "bold")).pack(anchor='e', padx=5)
 
         # Right: stock levels and actions
-        ctk.CTkLabel(right_frame, text="Stock Levels", font=("Arial", 14, "bold")).pack(anchor='w')
+        ctk.CTkLabel(right_frame, text="Stock Levels", font=("Arial", 14, "bold")).pack(anchor='w', padx=5, pady=5)
         stock_frame = ctk.CTkFrame(right_frame)
         stock_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.stock_tree = ttk.Treeview(stock_frame, columns=("id", "name", "stock"), show='headings', height=12)
@@ -144,7 +144,7 @@ class RestaurantApp:
         self.stock_tree.tag_configure('ok', background='#ccffcc')
 
         right_btns = ctk.CTkFrame(right_frame)
-        right_btns.pack(fill='x', pady=5)
+        right_btns.pack(fill='x', pady=5, padx=5)
         ctk.CTkButton(right_btns, text="Send to Kitchen", command=self.send_to_kitchen).pack(fill='x', pady=2)
         ctk.CTkButton(right_btns, text="Hold Order", command=self.hold_order).pack(fill='x', pady=2)
         ctk.CTkButton(right_btns, text="Cancel Order", command=self.cancel_order).pack(fill='x', pady=2)
@@ -249,10 +249,10 @@ class RestaurantApp:
         total = subtotal + tax
         win = ctk.CTkToplevel(self.root)
         win.title("Checkout Confirmation")
-        ctk.CTkLabel(win, text=f"Subtotal: ${subtotal:.2f}").pack(anchor='w')
-        ctk.CTkLabel(win, text=f"Tax: ${tax:.2f}").pack(anchor='w')
-        ctk.CTkLabel(win, text=f"Total: ${total:.2f}", font=("Arial", 12, 'bold')).pack(anchor='w', pady=(0,5))
-        ctk.CTkLabel(win, text="Confirm checkout? This will reduce stock.").pack(anchor='w')
+        ctk.CTkLabel(win, text=f"Subtotal: ${subtotal:.2f}").pack(anchor='w', padx=5)
+        ctk.CTkLabel(win, text=f"Tax: ${tax:.2f}").pack(anchor='w', padx=5)
+        ctk.CTkLabel(win, text=f"Total: ${total:.2f}", font=("Arial", 12, 'bold')).pack(anchor='w', padx=5)
+        ctk.CTkLabel(win, text="Confirm checkout? This will reduce stock.").pack(anchor='w', padx=5)
 
         def confirm():
             for p, q in self.order.items:
@@ -273,7 +273,7 @@ class RestaurantApp:
             win.destroy()
 
         btns = ctk.CTkFrame(win)
-        btns.pack(pady=5)
+        btns.pack(pady=10)
         ctk.CTkButton(btns, text="Confirm", command=confirm).pack(side='left', padx=5)
         ctk.CTkButton(btns, text="Cancel", command=win.destroy).pack(side='left', padx=5)
 
@@ -284,7 +284,7 @@ class RestaurantApp:
         subtotal = self.order.total()
         tax = subtotal * self.TAX_RATE
         total = subtotal + tax
-        win = tk.Toplevel(self.root)
+        win = ctk.CTkToplevel(self.root)
         win.title("Receipt Preview")
         text = tk.Text(win, width=40, height=20)
         text.pack(fill='both', expand=True)
