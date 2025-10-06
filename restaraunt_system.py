@@ -57,6 +57,19 @@ class Addon:
         self.addonImg = str(imgPath)
         self.addonImgSmall = str(imgSmallPath)
 
+class Order(Product, Addon):
+    #this references stuff from the products and addons so they use the same variable names
+    def __init__(self, ordID, prodID, prodPrice, addID, addPrice, finalPrice):
+        self.ordID = int(ordID)
+        Product.prodID = int(prodID)
+        Product.prodPrice = float(prodPrice)
+        Addon.addonID = int(addID)
+        Addon.addonPrice = float(addPrice)
+        self.finalPrice = float(finalPrice)
+
+        #Working on the calculation for the final price, this is all I have for now but I will continue to work on it
+        finalPrice += prodPrice + addPrice
+
 class InventoryHandler:
     def __init__(self):
         self.productFilePath = defaultProductFile # Initialize to the default products file; this is just done for reference.
