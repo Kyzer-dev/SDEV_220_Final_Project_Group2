@@ -61,4 +61,40 @@ prodSales=400
 prodImg=
 prodImgSmall=
 
+prodID=006
+prodName=Bacon
+prodDesc=Crispy bacon strips.
+prodPrice=1.00
+prodStock=300
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=007
+prodName=Lettuce
+prodDesc=Fresh lettuce leaves.
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=008
+prodName=Tomato
+prodDesc=Two fresh tomato slices.
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=009
+prodName=BBQ Sauce
+prodDesc=A smoky BBQ sauce.
+prodPrice=0
+prodStock=1500
+prodSales=0
+prodImg=
+prodImgSmall=
+
 end_of_file

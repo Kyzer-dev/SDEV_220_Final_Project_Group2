@@ -50,14 +50,38 @@ prodImg=
 prodImgSmall=
 
 prodID=2
-prodName=Tag Order Doesn't Matter Burger
-prodDesc=Since we use a dictionary, the order of tags doesn't matter.|You should still do it in the right order, though!
-prodPrice=2.99
+prodName=Chicken Tenders
+prodDesc=Crispy breaded chicken tenders.|Served with your choice of sauce.
+prodPrice=5.99
 prodStock=300
 prodSales=3000
 prodBasedOn=0
-prodPresetAddons=000,002
-prodValidAddons=000,001,002,003,004
+prodPresetAddons=009
+prodValidAddons=001,002,003,009
+prodImg=
+prodImgSmall=
+
+prodID=3
+prodName=Chicken Sandwich
+prodDesc=A grilled chicken breast on a toasted bun.|Served with lettuce and mayo.
+prodPrice=6.49
+prodStock=150
+prodSales=125
+prodBasedOn=
+prodPresetAddons=003
+prodValidAddons=001,002,003,004,005
+prodImg=
+prodImgSmall=
+
+prodID=4
+prodName=Veggie Burger
+prodDesc=A seasoned veggie patty with classic toppings.|A lighter, flavorful option.
+prodPrice=5.99
+prodStock=120
+prodSales=90
+prodBasedOn=
+prodPresetAddons=004,005
+prodValidAddons=000,001,002,003,004,005
 prodImg=
 prodImgSmall=
 
