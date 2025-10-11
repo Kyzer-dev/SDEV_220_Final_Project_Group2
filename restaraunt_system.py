@@ -58,63 +58,84 @@ class Addon:
         self.addonImgSmall = str(imgSmallPath)
 
 class Order(Product, Addon):
-    #this references stuff from the products and addons so they use the same variable names
+    # Store product info per order instead of using class variables
     def __init__(self, ordID, prodID, prodPrice, addID, addPrice, finalPrice, prodName="Unknown"):
         self.ordID = int(ordID)
-        Product.prodID = int(prodID)
-        Product.prodName = str(prodName)
-        Product.prodPrice = float(prodPrice)
-        Addon.addonID = int(addID)
-        Addon.addonPrice = float(addPrice)
+        self.prodID = int(prodID)
+        self.prodName = str(prodName) 
+        self.prodPrice = float(prodPrice)
+        self.addonID = int(addID)
+        self.addonPrice = float(addPrice)
         self.finalPrice = float(finalPrice)
 
-        #Working on the calculation for the final price, this is all I have for now but I will continue to work on it
-        finalPrice += prodPrice + addPrice
+        # Initialize totals
+        self.subtotal = self.prodPrice + self.addonPrice
+        self.tax = 0
+        self.tip = 0
+        self.total = 0
 
 #----------------------
-# print and file functions
-#--------------------
+# Print and file functions
+#----------------------
 
+    def printReceipt(self, taxRate=0.07, tipRate=0.15):
+        # Calculate tax, tip, and total
+        self.tax = self.subtotal * taxRate
+        self.tip = self.subtotal * tipRate
+        self.total = self.subtotal + self.tax + self.tip
 
-    def printReceipt(self):
-        #Print a simple receipt for this order.
+        # Print receipt using instance variables
         print("\n------ RECEIPT ------")
         print(f"Order ID: {self.ordID}")
-        print(f"Product ID: {Product.prodID}, Price: ${Product.prodPrice:.2f}")
-        print(f"Product Name: {Product.prodName}")
-        print(f"Addon ID: {Addon.addonID}, Price: ${Addon.addonPrice:.2f}")
-        print(f"Total: ${self.finalPrice:.2f}")
+        print(f"Product ID: {self.prodID}, Price: ${self.prodPrice:.2f}")
+        print(f"Product Name: {self.prodName}")
+        print(f"Addon ID: {self.addonID}, Price: ${self.addonPrice:.2f}")
+        print(f"Subtotal: ${self.subtotal:.2f}")
+        print(f"Tax ({taxRate*100:.0f}%): ${self.tax:.2f}")
+        print(f"Tip ({tipRate*100:.0f}%): ${self.tip:.2f}")
+        print(f"Total: ${self.total:.2f}")
         print("---------------------\n")
 
     def saveToFile(self, filePath="DatabaseFiles/orders.txt"):
-        #Save this order to a text file (append mode).
         try:
             with open(filePath, "a") as f:
-                f.write(f"ordID={self.ordID},prodID={Product.prodID},prodName={Product.prodName},prodPrice={Product.prodPrice},"
-                        f"addID={Addon.addonID},addPrice={Addon.addonPrice},finalPrice={self.finalPrice}\n")
+                f.write(
+                    f"ordID={self.ordID},prodID={self.prodID},prodName={self.prodName},prodPrice={self.prodPrice},"
+                    f"addID={self.addonID},addPrice={self.addonPrice},subtotal={self.subtotal:.2f},"
+                    f"tax={self.tax:.2f},tip={self.tip:.2f},total={self.total:.2f}\n"
+                )
             print(f"Order {self.ordID} saved to {filePath}")
         except Exception as e:
             print("Error saving order:", e)
 
     @staticmethod
     def loadFromFile(filePath="DatabaseFiles/orders.txt"):
-        #Load all saved orders from a text file and return them as a list of Order objects.
         orders = []
         try:
             with open(filePath, "r") as f:
                 for line in f:
                     if not line.strip():
                         continue
-                    parts = dict(item.split("=") for item in line.strip().split(","))
+                    try:
+                        parts = dict(item.split("=", 1) for item in line.strip().split(","))
+                    except Exception as e:
+                        print("Error parsing line:", line)
+                        continue
+
                     order = Order(
                         ordID=parts["ordID"],
                         prodID=parts["prodID"],
-                        prodName=parts.get("prodName", "Unknown"), 
                         prodPrice=parts["prodPrice"],
                         addID=parts["addID"],
                         addPrice=parts["addPrice"],
-                        finalPrice=parts["finalPrice"],
+                        finalPrice=float(parts.get("subtotal", 0)),
+                        prodName=parts.get("prodName", "Unknown"),
                     )
+                    # Restore saved totals
+                    order.subtotal = float(parts.get("subtotal", 0))
+                    order.tax = float(parts.get("tax", 0))
+                    order.tip = float(parts.get("tip", 0))
+                    order.total = float(parts.get("total", 0))
                     orders.append(order)
             print(f"Loaded {len(orders)} orders from {filePath}")
         except FileNotFoundError:
@@ -279,7 +300,7 @@ if __name__ == "__main__":
 
     #example order creation
     
-    #order1 = Order(ordID=1, prodID=0, prodPrice=4.99, addID=0, addPrice=1.50, finalPrice=6.49, prodName="Burger")
+    #order1 = Order(ordID=4, prodID=0, prodPrice=7.99, addID=0, addPrice=1.50, finalPrice=9.49, prodName="VeganBurger")
     #order1.printReceipt()
     #order1.saveToFile()
 
