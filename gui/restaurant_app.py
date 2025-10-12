@@ -104,7 +104,7 @@ class RestaurantApp:
         cat_frame = tk.Frame(left_frame)
         cat_frame.pack(fill='x', pady=(0, 5))
         ttk.Label(cat_frame, text="Categories:").pack(anchor='w')
-        # Category buttons are placeholders; product records currently have no category metadata.
+        # Category buttons are placeholders until we get product categories implemented.
         for cat in ["All"]:
             ttk.Button(cat_frame, text=cat, width=10, command=lambda c=cat: self.filter_category(c)).pack(side='left', padx=2)
 
@@ -185,7 +185,7 @@ class RestaurantApp:
         ttk.Button(right_btns, text="Hold Order", command=self.hold_order).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Cancel Order", command=self.cancel_order).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Load Menu", command=self.reload_menu).pack(fill='x', pady=2)
-        ttk.Button(right_btns, text="Update Stock", command=self.update_stock_placeholder).pack(fill='x', pady=2)
+        ttk.Button(right_btns, text="Update Stock", command=self.update_stock).pack(fill='x', pady=2)
 
     # --------------- Product / Stock ---------------
     def refresh_products(self):
@@ -296,7 +296,6 @@ class RestaurantApp:
                 pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
                 if pid_val is not None:
                     self.inventory.reduce_stock(pid_val, q)
-            # Save placeholder (no-op if not implemented)
             save_method = getattr(self.inventory, 'save_products', None)
             if callable(save_method):
                 save_method()
@@ -358,5 +357,58 @@ class RestaurantApp:
         self.refresh_stock_display()
         messagebox.showinfo("Reloaded", "Menu reloaded.")
 
-    def update_stock_placeholder(self):
-        messagebox.showinfo("Stock", "Stock update screen not implemented.")
+    def update_stock(self):
+        """Update stock for the selected product from the Stock Levels table."""
+        if not self.stock_tree:
+            return
+        sel = self.stock_tree.selection()
+        if not sel:
+            messagebox.showinfo("Update Stock", "Select a product in the Stock Levels list first.")
+            return
+        item_vals = self.stock_tree.item(sel[0], 'values')
+        try:
+            pid = int(item_vals[0])
+        except Exception:
+            messagebox.showerror("Error", "Could not read product ID.")
+            return
+        product = self.inventory.get_product(pid)
+        if not product:
+            messagebox.showerror("Error", "Product not found in inventory.")
+            return
+
+        # Tiny prompt window
+        win = tk.Toplevel(self.root)
+        win.title("Update Stock")
+        ttk.Label(win, text=f"Set new stock for: {getattr(product, 'prodName', 'Item')} (ID {pid})").pack(anchor='w', padx=8, pady=(8, 4))
+        row = tk.Frame(win)
+        row.pack(fill='x', padx=8)
+        ttk.Label(row, text="New stock:").pack(side='left')
+        qty_var = tk.StringVar(value=str(getattr(product, 'prodStock', 0)))
+        qty_entry = ttk.Entry(row, width=10, textvariable=qty_var)
+        qty_entry.pack(side='left', padx=6)
+
+        def apply_update():
+            try:
+                new_stock = int(qty_var.get())
+                if new_stock < 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Invalid", "Enter a non-negative whole number for stock.")
+                return
+            # Update in memory
+            setattr(product, 'prodStock', new_stock)
+            # Persist to file (minimal implementation in Inventory.save_products)
+            save_method = getattr(self.inventory, 'save_products', None)
+            if callable(save_method):
+                save_method()
+            # Refresh UI
+            self.refresh_products()
+            self.refresh_stock_display()
+            messagebox.showinfo("Updated", f"Stock set to {new_stock} for {getattr(product, 'prodName', 'Item')}.")
+            win.destroy()
+
+        btns = tk.Frame(win)
+        btns.pack(pady=8)
+        ttk.Button(btns, text="Apply", command=apply_update).pack(side='left', padx=6)
+        ttk.Button(btns, text="Cancel", command=win.destroy).pack(side='left', padx=6)
+        qty_entry.focus_set()
