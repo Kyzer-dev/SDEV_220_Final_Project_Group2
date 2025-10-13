@@ -207,17 +207,21 @@ class RestaurantApp:
         self.order_tree.configure(yscrollcommand=order_scroll.set)
         order_scroll.pack(side='right', fill='y')
 
-        btn_frame = tk.Frame(center_frame, pady=5)
-        btn_frame.pack(fill='x')
-        ttk.Button(btn_frame, text="Remove Last Item", command=self.remove_last_item).pack(side='left')
-        ttk.Button(btn_frame, text="Checkout", command=self.checkout_popup, takefocus=0).pack(side='left', padx=5)
-        ttk.Button(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
+        # Move buttons for more screen space
+        bottom_frame = tk.Frame(center_frame, pady=5)
+        bottom_frame.pack(fill='x')
 
-        totals_frame = tk.Frame(center_frame, pady=5)
-        totals_frame.pack(fill='x')
-        ttk.Label(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
-        ttk.Label(totals_frame, textvariable=self.tax_var).pack(anchor='e')
-        ttk.Label(totals_frame, textvariable=self.total_var, style='Total.TLabel').pack(anchor='e')
+        btn_bar = tk.Frame(bottom_frame)
+        btn_bar.pack(side='left', anchor='w')
+        ttk.Button(btn_bar, text="Remove\nLast Item", command=self.remove_last_item).pack(side='left')
+        ttk.Button(btn_bar, text="Checkout", command=self.checkout_popup, takefocus=0).pack(side='left', padx=8)
+        ttk.Button(btn_bar, text="Print\nReceipt", command=self.print_receipt).pack(side='left')
+
+        totals_bar = tk.Frame(bottom_frame)
+        totals_bar.pack(side='right', anchor='e')
+        ttk.Label(totals_bar, textvariable=self.subtotal_var).pack(anchor='e')
+        ttk.Label(totals_bar, textvariable=self.tax_var).pack(anchor='e')
+        ttk.Label(totals_bar, textvariable=self.total_var, style='Total.TLabel').pack(anchor='e')
 
         # Right: stock levels and actions
         ttk.Label(right_frame, text="Stock Levels", style='Section.TLabel').pack(anchor='w')
