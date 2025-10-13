@@ -300,6 +300,28 @@ class RestaurantApp:
             save_method = getattr(self.inventory, 'save_products', None)
             if callable(save_method):
                 save_method()
+
+            # Calculate subtotal and tax
+            subtotal = self.order.total()
+            tax = subtotal * self.TAX_RATE
+
+            # Ask user for tip
+            import tkinter.simpledialog as simpledialog
+            tip_str = simpledialog.askstring("Tip", "Enter tip amount ($):", initialvalue="0")
+            try:
+                tip = float(tip_str)
+                if tip < 0:
+                    tip = 0.0
+            except Exception:
+                tip = 0.0
+
+            total = subtotal + tax + tip
+
+            try:
+                self.order.save_to_file("DatabaseFiles/orders.txt", tax=tax, tip=tip)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save order: {e}")
+            
             self.refresh_products()
             self.refresh_stock_display()
             messagebox.showinfo("Done", "Order checked out. Stock updated.")

@@ -1,3 +1,39 @@
-ordID=2,prodID=0,prodName=CheeseBurger,prodPrice=4.99,addID=0,addPrice=1.5,subtotal=6.49,tax=0.45,tip=0.97,total=7.92
-ordID=3,prodID=0,prodName=Burger,prodPrice=5.99,addID=0,addPrice=1.5,subtotal=7.49,tax=0.52,tip=1.12,total=9.14
-ordID=4,prodID=0,prodName=VeganBurger,prodPrice=7.99,addID=0,addPrice=1.5,subtotal=9.49,tax=0.66,tip=1.42,total=11.58
+
+Order Timestamp: 2025-10-11 22:20:41
+Burger x10 @ $4.99 = $49.90
+Subtotal: $49.90
+Tax: $3.49
+Tip: $5.00
+Total: $58.39
+----------------------------------------
+Order Timestamp: 2025-10-11 22:23:33
+Kids Burger x2 @ $3.99 = $7.98
+BBQ Burger x2 @ $7.49 = $14.98
+Kids Burger x2 @ $3.99 = $7.98
+Garden Salad x2 @ $4.49 = $8.98
+Chicken Sandwich x2 @ $6.49 = $12.98
+Cheeseburger x2 @ $5.49 = $10.98
+Subtotal: $63.88
+Tax: $4.47
+Tip: $10.00
+Total: $78.35
+----------------------------------------
+Order Timestamp: 2025-10-11 22:23:46
+Chicken Tenders x2 @ $5.99 = $11.98
+Chicken Tenders x2 @ $5.99 = $11.98
+Chicken Tenders x2 @ $5.99 = $11.98
+Subtotal: $35.94
+Tax: $2.52
+Tip: $2.00
+Total: $40.46
+----------------------------------------
+Order Timestamp: 2025-10-11 22:23:56
+Double Cheeseburger x2 @ $7.99 = $15.98
+Double Cheeseburger x2 @ $7.99 = $15.98
+BBQ Burger x2 @ $7.49 = $14.98
+BBQ Burger x2 @ $7.49 = $14.98
+Subtotal: $61.92
+Tax: $4.33
+Tip: $9.00
+Total: $75.25
+----------------------------------------

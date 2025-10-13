@@ -3,7 +3,7 @@
     python main.py        # start the GUI
     python main.py --cli  # quick console test mode
 """
-from models import Inventory, Order
+from models import Inventory, Order, Product, Addon
 import sys
 import traceback
 

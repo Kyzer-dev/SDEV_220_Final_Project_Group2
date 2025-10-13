@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import List, Tuple, Union
 from .product import Product, Addon
+import datetime
 
 LineItem = Tuple[Union[Product, Addon], int]
 
@@ -29,3 +30,20 @@ class Order:
         lines.append("-" * 28)
         lines.append(f"Subtotal: ${self.total():.2f}")
         return "\n".join(lines)
+
+    def save_to_file(self, filename: str, tax: float = 0.0, tip: float = 0.0):
+        """Append the order summary to a text file with timestamp, tax, and tip."""
+        from datetime import datetime
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write(f"Order Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            for item, qty in self.items:
+                name = getattr(item, 'prodName', getattr(item, 'addonName', 'Item'))
+                price = getattr(item, 'price', 0.0)
+                f.write(f"{name} x{qty} @ ${price:.2f} = ${price*qty:.2f}\n")
+            subtotal = self.total()
+            total = subtotal + tax + tip
+            f.write(f"Subtotal: ${subtotal:.2f}\n")
+            f.write(f"Tax: ${tax:.2f}\n")
+            f.write(f"Tip: ${tip:.2f}\n")
+            f.write(f"Total: ${total:.2f}\n")
+            f.write("-"*40 + "\n")

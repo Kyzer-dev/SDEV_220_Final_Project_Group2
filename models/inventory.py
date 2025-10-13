@@ -99,4 +99,21 @@ class Inventory:
 
     # --------------------- Serialization ---------------------
     def save_products(self):        
-        pass
+        try:
+            with open(self.product_file, 'w', encoding='utf-8') as f:
+                for p in self.products:
+                    f.write(f"prodID={p.prodID}\n")
+                    f.write(f"prodName={p.prodName}\n")
+                    f.write(f"prodDesc={p.prodDesc}\n")
+                    f.write(f"prodPrice={p.prodPrice}\n")
+                    f.write(f"prodStock={p.prodStock}\n")
+                    f.write(f"prodSales={p.prodSales}\n")
+                    f.write(f"prodBasedOn={p.prodBasedOn or ''}\n")
+                    f.write(f"prodPresetAddons={p.prodPresetAddons}\n")
+                    f.write(f"prodValidAddons={p.prodValidAddons}\n")
+                    f.write(f"prodImg={p.prodImg}\n")
+                    f.write(f"prodImgSmall={p.prodImgSmall}\n")
+                    f.write("\n")
+                f.write("end_of_file\n")
+        except Exception as e:
+            print("Error saving products:", e)
