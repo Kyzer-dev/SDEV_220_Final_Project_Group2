@@ -1,1 +1,3 @@
-ordID=1,prodID=0,prodName=Burger,prodPrice=4.99,addID=0,addPrice=1.5,finalPrice=6.49
+ordID=2,prodID=0,prodName=CheeseBurger,prodPrice=4.99,addID=0,addPrice=1.5,subtotal=6.49,tax=0.45,tip=0.97,total=7.92
+ordID=3,prodID=0,prodName=Burger,prodPrice=5.99,addID=0,addPrice=1.5,subtotal=7.49,tax=0.52,tip=1.12,total=9.14
+ordID=4,prodID=0,prodName=VeganBurger,prodPrice=7.99,addID=0,addPrice=1.5,subtotal=9.49,tax=0.66,tip=1.42,total=11.58
