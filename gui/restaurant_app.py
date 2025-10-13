@@ -352,14 +352,17 @@ class RestaurantApp:
 
         def confirm():
             for p, q in self.order.items:
+                # Reduce stock using updated product structure
                 pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
                 if pid_val is not None:
-                    self.backend.reduce_stock(pid_val, q)
-            self.backend.save_products()
+                    self.inventory.reduce_stock(pid_val, q)
+            save_method = getattr(self.inventory, 'save_products', None)
+            if callable(save_method):
+                save_method()
             self.refresh_products()
             self.refresh_stock_display()
             messagebox.showinfo("Done", "Order checked out. Stock updated.")
-            self.order = AppOrder()
+            self.order = Order()
             self.update_order_tree()
             self.update_order_summary()
             win.destroy()
@@ -402,12 +405,14 @@ class RestaurantApp:
             messagebox.showinfo("Nothing", "No order to cancel.")
             return
         if messagebox.askyesno("Cancel", "Clear current order?"):
-            self.order = AppOrder()
+            self.order = Order()
             self.update_order_tree()
             self.update_order_summary()
 
     def reload_menu(self):
-        self.backend.load()
+        load_method = getattr(self.inventory, 'load', None)
+        if callable(load_method):
+            load_method()
         self.refresh_products()
         self.refresh_stock_display()
         messagebox.showinfo("Reloaded", "Menu reloaded.")
