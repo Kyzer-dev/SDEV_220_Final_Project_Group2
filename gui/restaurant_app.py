@@ -299,11 +299,11 @@ class RestaurantApp:
             return
         item_vals = self.menu_tree.item(selection[0], 'values')
         pid = int(item_vals[0])
-        product = self.inventory.get_product(pid)
+        product = self.backend.get_product(pid)
         if not product:
             messagebox.showerror("Error", "Product not found.")
             return
-        current_stock = getattr(product, 'stock', getattr(product, 'prodStock', 0))
+        current_stock = getattr(product, 'prodStock', 0)
         if current_stock < qty:
             messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
             return
@@ -317,7 +317,7 @@ class RestaurantApp:
         for row in self.order_tree.get_children():
             self.order_tree.delete(row)
         for p, q in self.order.items:
-            price_val = getattr(p, 'price', getattr(p, 'prodPrice', 0.0))
+            price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
             name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
             subtotal = price_val * q
             self.order_tree.insert('', 'end', values=(name_val, q, f"${price_val:.2f}", f"${subtotal:.2f}"))
@@ -352,17 +352,14 @@ class RestaurantApp:
 
         def confirm():
             for p, q in self.order.items:
-                # Reduce stock using updated product structure
                 pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
                 if pid_val is not None:
-                    self.inventory.reduce_stock(pid_val, q)
-            save_method = getattr(self.inventory, 'save_products', None)
-            if callable(save_method):
-                save_method()
+                    self.backend.reduce_stock(pid_val, q)
+            self.backend.save_products()
             self.refresh_products()
             self.refresh_stock_display()
             messagebox.showinfo("Done", "Order checked out. Stock updated.")
-            self.order = Order()
+            self.order = AppOrder()
             self.update_order_tree()
             self.update_order_summary()
             win.destroy()
@@ -405,14 +402,12 @@ class RestaurantApp:
             messagebox.showinfo("Nothing", "No order to cancel.")
             return
         if messagebox.askyesno("Cancel", "Clear current order?"):
-            self.order = Order()
+            self.order = AppOrder()
             self.update_order_tree()
             self.update_order_summary()
 
     def reload_menu(self):
-        load_method = getattr(self.inventory, 'load', None)
-        if callable(load_method):
-            load_method()
+        self.backend.load()
         self.refresh_products()
         self.refresh_stock_display()
         messagebox.showinfo("Reloaded", "Menu reloaded.")
