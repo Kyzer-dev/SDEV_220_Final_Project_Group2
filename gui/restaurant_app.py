@@ -9,9 +9,70 @@ Category buttons are just filler (no category field yet). 'All' just reloads eve
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
-from typing import Optional
+from typing import Optional, Any
 
 from models import Inventory, Order
+from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile 
+
+# -------------- Connect to Backend --------------
+class BackendAdapter:
+    def __init__(self) -> None:
+        self.handler = InventoryHandler()
+        # Load product data
+        self.handler.loadDataFile(defaultProductFile, "Product")
+        self.handler.loadDataFile(defaultAddonFile, "Addon")
+
+    @property
+    def products(self):
+        return self.handler.productList
+
+    @property
+    def addons(self):
+        return self.handler.addonList
+
+    def load(self) -> None:
+        self.handler.loadDataFile(defaultProductFile, "Product")
+        self.handler.loadDataFile(defaultAddonFile, "Addon")
+
+    def get_product(self, pid: int):
+        for p in self.handler.productList:
+            if getattr(p, 'prodID', None) == pid:
+                return p
+        return None
+
+    def reduce_stock(self, pid: int, qty: int) -> bool:
+        # Negative reduces stock; InventoryHandler handles bounds
+        return self.handler.updateStock(pid, -qty)
+
+    def save_products(self) -> bool:
+        ids = [str(p.prodID) for p in self.handler.productList]
+        return self.handler.commitMultipleStock(ids)
+
+
+# -------------- Lightweight order local to GUI --------------
+class AppOrder:
+    def __init__(self) -> None:
+        self.items: list[tuple[Any, int]] = []
+
+    def add_item(self, item: Any, qty: int = 1) -> None:
+        self.items.append((item, qty))
+
+    def remove_last_item(self) -> None:
+        if self.items:
+            self.items.pop()
+
+    def total(self) -> float:
+        return sum(getattr(i, 'prodPrice', getattr(i, 'addonPrice', 0.0)) * q for i, q in self.items)
+
+    def summary(self) -> str:
+        lines = ["Receipt Summary:"]
+        for i, q in self.items:
+            name = getattr(i, 'prodName', getattr(i, 'addonName', 'Item'))
+            price = getattr(i, 'prodPrice', getattr(i, 'addonPrice', 0.0))
+            lines.append(f"{name} x{q} @ ${price:.2f} = ${price * q:.2f}")
+        lines.append("-" * 28)
+        lines.append(f"Subtotal: ${self.total():.2f}")
+        return "\n".join(lines)
 
 class RestaurantApp:
     TAX_RATE = 0.07
@@ -19,6 +80,8 @@ class RestaurantApp:
     def __init__(self, root: tk.Tk, inventory: Inventory):
         self.root = root
         self.root.title("Restaurant Ordering System")
+        # Add backend adapter
+        self.backend = BackendAdapter()
         self.inventory = inventory
         self.order = Order()
         self.current_category: Optional[str] = None
