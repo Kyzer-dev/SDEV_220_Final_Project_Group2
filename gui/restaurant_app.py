@@ -252,29 +252,26 @@ class RestaurantApp:
 
     # --------------- Product / Stock ---------------
     def refresh_products(self):
-        if not self.inventory.products:
-            # Use updated loader compatible with group project database format
-            load_method = getattr(self.inventory, 'load', None)
-            if callable(load_method):
-                load_method()
+        if not self.backend.products:
+            self.backend.load()
         if not self.menu_tree:
             return
         for row in self.menu_tree.get_children():
             self.menu_tree.delete(row)
-        for p in self.inventory.products:
+        for p in self.backend.products:
             # Category filtering skipped (no category field). Could be extended later.
             self.menu_tree.insert('', 'end', values=(getattr(p, 'prodID', getattr(p, 'id', '?')),
                                                      getattr(p, 'prodName', 'Unknown'),
-                                                     f"${getattr(p, 'price', getattr(p, 'prodPrice', 0.0)):.2f}",
-                                                     getattr(p, 'stock', getattr(p, 'prodStock', 0))))
+                                                     f"${getattr(p, 'prodPrice', 0.0):.2f}",
+                                                     getattr(p, 'prodStock', 0)))
 
     def refresh_stock_display(self):
         if not self.stock_tree:
             return
         for row in self.stock_tree.get_children():
             self.stock_tree.delete(row)
-        for p in self.inventory.products:
-            stock_val = getattr(p, 'stock', getattr(p, 'prodStock', 0))
+        for p in self.backend.products:
+            stock_val = getattr(p, 'prodStock', 0)
             tag = 'low' if stock_val <= 5 else 'ok'
             self.stock_tree.insert('', 'end', values=(getattr(p, 'prodID', getattr(p, 'id', '?')),
                                                       getattr(p, 'prodName', 'Unknown'),
