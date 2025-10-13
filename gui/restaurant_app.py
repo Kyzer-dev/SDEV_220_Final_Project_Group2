@@ -10,8 +10,6 @@ Category buttons are just filler (no category field yet). 'All' just reloads eve
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional, Any
-
-from models import Inventory, Order
 from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile 
 
 # -------------- Connect to Backend --------------
@@ -77,13 +75,12 @@ class AppOrder:
 class RestaurantApp:
     TAX_RATE = 0.07
 
-    def __init__(self, root: tk.Tk, inventory: Inventory):
+    def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Restaurant Ordering System")
         # Add backend adapter
         self.backend = BackendAdapter()
-        self.inventory = inventory
-        self.order = Order()
+        self.order = AppOrder()
         self.current_category: Optional[str] = None
 
         # Declare widget attributes for type checking
@@ -352,17 +349,14 @@ class RestaurantApp:
 
         def confirm():
             for p, q in self.order.items:
-                # Reduce stock using updated product structure
                 pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
                 if pid_val is not None:
-                    self.inventory.reduce_stock(pid_val, q)
-            save_method = getattr(self.inventory, 'save_products', None)
-            if callable(save_method):
-                save_method()
+                    self.backend.reduce_stock(pid_val, q)
+            self.backend.save_products()
             self.refresh_products()
             self.refresh_stock_display()
             messagebox.showinfo("Done", "Order checked out. Stock updated.")
-            self.order = Order()
+            self.order = AppOrder()
             self.update_order_tree()
             self.update_order_summary()
             win.destroy()
@@ -405,14 +399,12 @@ class RestaurantApp:
             messagebox.showinfo("Nothing", "No order to cancel.")
             return
         if messagebox.askyesno("Cancel", "Clear current order?"):
-            self.order = Order()
+            self.order = AppOrder()
             self.update_order_tree()
             self.update_order_summary()
 
     def reload_menu(self):
-        load_method = getattr(self.inventory, 'load', None)
-        if callable(load_method):
-            load_method()
+        self.backend.load()
         self.refresh_products()
         self.refresh_stock_display()
         messagebox.showinfo("Reloaded", "Menu reloaded.")
@@ -431,7 +423,7 @@ class RestaurantApp:
         except Exception:
             messagebox.showerror("Error", "Could not read product ID.")
             return
-        product = self.inventory.get_product(pid)
+        product = self.backend.get_product(pid)
         if not product:
             messagebox.showerror("Error", "Product not found in inventory.")
             return
@@ -457,10 +449,8 @@ class RestaurantApp:
                 return
             # Update in memory
             setattr(product, 'prodStock', new_stock)
-            # Persist to file (minimal implementation in Inventory.save_products)
-            save_method = getattr(self.inventory, 'save_products', None)
-            if callable(save_method):
-                save_method()
+            # Persist to file via backend adapter
+            self.backend.save_products()
             # Refresh UI
             self.refresh_products()
             self.refresh_stock_display()
