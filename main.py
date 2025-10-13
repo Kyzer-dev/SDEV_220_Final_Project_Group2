@@ -3,7 +3,7 @@
     python main.py        # start the GUI
     python main.py --cli  # quick console test mode
 """
-from models import Inventory, Order, Product, Addon
+from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile # type: ignore
 import sys
 import traceback
 
