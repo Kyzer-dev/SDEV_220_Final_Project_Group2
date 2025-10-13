@@ -9,17 +9,14 @@ import traceback
 
 
 def run_cli():
-    inv = Inventory(); inv.load()
-    print(f"Loaded {len(inv.products)} products and {len(inv.addons)} addons.")
-    if inv.products:
-        first = inv.products[0]
-        print("First product:", first.prodName, "Price:", first.prodPrice)
-    order = Order()
-    if inv.products:
-        order.add_item(inv.products[0], 2)
-    if inv.addons:
-        order.add_item(inv.addons[0], 1)
-    print(order.summary())
+    """Use to verify data loads from text database files."""
+    handler = InventoryHandler()
+    handler.loadDataFile(defaultProductFile, "Product")
+    handler.loadDataFile(defaultAddonFile, "Addon")
+    print(f"Loaded {len(handler.productList)} products and {len(handler.addonList)} addons.")
+    if handler.productList:
+        first = handler.productList[0]
+        print("First product:", getattr(first, 'prodName', '?'), "Price:", getattr(first, 'prodPrice', 0.0))
 
 
 def run_gui():
@@ -31,7 +28,7 @@ def run_gui():
         print(e)
         return
     try:
-        # Use package-qualified import so it works regardless of cwd.
+        # import the main GUI class
         from gui.restaurant_app import RestaurantApp  # type: ignore
     except ModuleNotFoundError as e:
         print("ERROR: Could not import RestaurantApp. Make sure you run from the project root.")
@@ -43,11 +40,10 @@ def run_gui():
         traceback.print_exc()
         return
 
-    inv = Inventory(); inv.load()
     root = tk.Tk()
     root.title("Restaurant Ordering System")
     try:
-        _app = RestaurantApp(root, inv)
+        _app = RestaurantApp(root)
     except Exception:
         print("Unexpected error constructing RestaurantApp. Traceback below:")
         traceback.print_exc()

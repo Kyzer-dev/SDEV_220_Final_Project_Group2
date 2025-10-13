@@ -9,18 +9,78 @@ Category buttons are just filler (no category field yet). 'All' just reloads eve
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
-from typing import Optional
+from typing import Optional, Any
+from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile 
 
-from models import Inventory, Order
+# -------------- Connect to Backend --------------
+class BackendAdapter:
+    def __init__(self) -> None:
+        self.handler = InventoryHandler()
+        # Load product data
+        self.handler.loadDataFile(defaultProductFile, "Product")
+        self.handler.loadDataFile(defaultAddonFile, "Addon")
+
+    @property
+    def products(self):
+        return self.handler.productList
+
+    @property
+    def addons(self):
+        return self.handler.addonList
+
+    def load(self) -> None:
+        self.handler.loadDataFile(defaultProductFile, "Product")
+        self.handler.loadDataFile(defaultAddonFile, "Addon")
+
+    def get_product(self, pid: int):
+        for p in self.handler.productList:
+            if getattr(p, 'prodID', None) == pid:
+                return p
+        return None
+
+    def reduce_stock(self, pid: int, qty: int) -> bool:
+        # Negative reduces stock; InventoryHandler handles bounds
+        return self.handler.updateStock(pid, -qty)
+
+    def save_products(self) -> bool:
+        ids = [str(p.prodID) for p in self.handler.productList]
+        return self.handler.commitMultipleStock(ids)
+
+
+# -------------- Lightweight order local to GUI --------------
+class AppOrder:
+    def __init__(self) -> None:
+        self.items: list[tuple[Any, int]] = []
+
+    def add_item(self, item: Any, qty: int = 1) -> None:
+        self.items.append((item, qty))
+
+    def remove_last_item(self) -> None:
+        if self.items:
+            self.items.pop()
+
+    def total(self) -> float:
+        return sum(getattr(i, 'prodPrice', getattr(i, 'addonPrice', 0.0)) * q for i, q in self.items)
+
+    def summary(self) -> str:
+        lines = ["Receipt Summary:"]
+        for i, q in self.items:
+            name = getattr(i, 'prodName', getattr(i, 'addonName', 'Item'))
+            price = getattr(i, 'prodPrice', getattr(i, 'addonPrice', 0.0))
+            lines.append(f"{name} x{q} @ ${price:.2f} = ${price * q:.2f}")
+        lines.append("-" * 28)
+        lines.append(f"Subtotal: ${self.total():.2f}")
+        return "\n".join(lines)
 
 class RestaurantApp:
     TAX_RATE = 0.07
 
-    def __init__(self, root: tk.Tk, inventory: Inventory):
+    def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Restaurant Ordering System")
-        self.inventory = inventory
-        self.order = Order()
+        # Add backend adapter
+        self.backend = BackendAdapter()
+        self.order = AppOrder()
         self.current_category: Optional[str] = None
 
         # Declare widget attributes for type checking
@@ -189,29 +249,26 @@ class RestaurantApp:
 
     # --------------- Product / Stock ---------------
     def refresh_products(self):
-        if not self.inventory.products:
-            # Use updated loader compatible with group project database format
-            load_method = getattr(self.inventory, 'load', None)
-            if callable(load_method):
-                load_method()
+        if not self.backend.products:
+            self.backend.load()
         if not self.menu_tree:
             return
         for row in self.menu_tree.get_children():
             self.menu_tree.delete(row)
-        for p in self.inventory.products:
+        for p in self.backend.products:
             # Category filtering skipped (no category field). Could be extended later.
             self.menu_tree.insert('', 'end', values=(getattr(p, 'prodID', getattr(p, 'id', '?')),
                                                      getattr(p, 'prodName', 'Unknown'),
-                                                     f"${getattr(p, 'price', getattr(p, 'prodPrice', 0.0)):.2f}",
-                                                     getattr(p, 'stock', getattr(p, 'prodStock', 0))))
+                                                     f"${getattr(p, 'prodPrice', 0.0):.2f}",
+                                                     getattr(p, 'prodStock', 0)))
 
     def refresh_stock_display(self):
         if not self.stock_tree:
             return
         for row in self.stock_tree.get_children():
             self.stock_tree.delete(row)
-        for p in self.inventory.products:
-            stock_val = getattr(p, 'stock', getattr(p, 'prodStock', 0))
+        for p in self.backend.products:
+            stock_val = getattr(p, 'prodStock', 0)
             tag = 'low' if stock_val <= 5 else 'ok'
             self.stock_tree.insert('', 'end', values=(getattr(p, 'prodID', getattr(p, 'id', '?')),
                                                       getattr(p, 'prodName', 'Unknown'),
@@ -239,11 +296,11 @@ class RestaurantApp:
             return
         item_vals = self.menu_tree.item(selection[0], 'values')
         pid = int(item_vals[0])
-        product = self.inventory.get_product(pid)
+        product = self.backend.get_product(pid)
         if not product:
             messagebox.showerror("Error", "Product not found.")
             return
-        current_stock = getattr(product, 'stock', getattr(product, 'prodStock', 0))
+        current_stock = getattr(product, 'prodStock', 0)
         if current_stock < qty:
             messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
             return
@@ -257,7 +314,7 @@ class RestaurantApp:
         for row in self.order_tree.get_children():
             self.order_tree.delete(row)
         for p, q in self.order.items:
-            price_val = getattr(p, 'price', getattr(p, 'prodPrice', 0.0))
+            price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
             name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
             subtotal = price_val * q
             self.order_tree.insert('', 'end', values=(name_val, q, f"${price_val:.2f}", f"${subtotal:.2f}"))
@@ -292,7 +349,6 @@ class RestaurantApp:
 
         def confirm():
             for p, q in self.order.items:
-                # Reduce stock using updated product structure
                 pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
                 if pid_val is not None:
                     self.inventory.reduce_stock(pid_val, q)
@@ -324,7 +380,7 @@ class RestaurantApp:
             self.refresh_products()
             self.refresh_stock_display()
             messagebox.showinfo("Done", "Order checked out. Stock updated.")
-            self.order = Order()
+            self.order = AppOrder()
             self.update_order_tree()
             self.update_order_summary()
             win.destroy()
@@ -367,14 +423,12 @@ class RestaurantApp:
             messagebox.showinfo("Nothing", "No order to cancel.")
             return
         if messagebox.askyesno("Cancel", "Clear current order?"):
-            self.order = Order()
+            self.order = AppOrder()
             self.update_order_tree()
             self.update_order_summary()
 
     def reload_menu(self):
-        load_method = getattr(self.inventory, 'load', None)
-        if callable(load_method):
-            load_method()
+        self.backend.load()
         self.refresh_products()
         self.refresh_stock_display()
         messagebox.showinfo("Reloaded", "Menu reloaded.")
@@ -393,7 +447,7 @@ class RestaurantApp:
         except Exception:
             messagebox.showerror("Error", "Could not read product ID.")
             return
-        product = self.inventory.get_product(pid)
+        product = self.backend.get_product(pid)
         if not product:
             messagebox.showerror("Error", "Product not found in inventory.")
             return
@@ -419,10 +473,8 @@ class RestaurantApp:
                 return
             # Update in memory
             setattr(product, 'prodStock', new_stock)
-            # Persist to file (minimal implementation in Inventory.save_products)
-            save_method = getattr(self.inventory, 'save_products', None)
-            if callable(save_method):
-                save_method()
+            # Persist to file via backend adapter
+            self.backend.save_products()
             # Refresh UI
             self.refresh_products()
             self.refresh_stock_display()
