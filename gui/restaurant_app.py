@@ -37,6 +37,12 @@ class BackendAdapter:
             if getattr(p, 'prodID', None) == pid:
                 return p
         return None
+    
+    def get_addon(self, aid: int):
+        for a in self.handler.addonList:
+            if getattr(a, 'addonID', None) == aid:
+                return a
+        return None
 
     def reduce_stock(self, pid: int, qty: int) -> bool:
         # Negative reduces stock; InventoryHandler handles bounds
@@ -198,6 +204,7 @@ class RestaurantApp:
 
         menu_frame = tk.Frame(left_frame)
         menu_frame.pack(fill='both', expand=True)
+        ttk.Label(menu_frame, text="Products", style='Section.TLabel').pack()
         self.menu_tree = ttk.Treeview(menu_frame, columns=("id", "name", "price", "stock"), show='headings', height=12)
         for col, text, w in [("id", "ID", 40), ("name", "Name", 140), ("price", "Price", 70), ("stock", "Stock", 60)]:
             self.menu_tree.heading(col, text=text)
@@ -208,6 +215,22 @@ class RestaurantApp:
         self.menu_tree.configure(yscrollcommand=menu_scroll.set)
         menu_scroll.pack(side='right', fill='y')
 
+        self.menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
+        
+        # Addons menu, left side, basically the same as the product one above
+        addon_menu_frame = tk.Frame(left_frame)
+        addon_menu_frame.pack(fill='both', expand=True)
+        ttk.Label(addon_menu_frame, text="Addons / Mods", style='Section.TLabel').pack()
+        self.addon_menu_tree = ttk.Treeview(addon_menu_frame, columns=("id", "name", "price", "stock"), show='headings', height=12)
+        for col, text, w in [("id", "ID", 40), ("name", "Name", 140), ("price", "Price", 70), ("stock", "Stock", 60)]:
+            self.addon_menu_tree.heading(col, text=text)
+            self.addon_menu_tree.column(col, width=w, anchor='center')
+        self.addon_menu_tree.pack(side='left', fill='both', expand=True)
+        addon_menu_scroll = ttk.Scrollbar(addon_menu_frame, orient='vertical')
+        addon_menu_scroll.config(command=self.addon_menu_tree.yview)  # type: ignore[arg-type]
+        self.addon_menu_tree.configure(yscrollcommand=addon_menu_scroll.set)
+        addon_menu_scroll.pack(side='right', fill='y')
+
         qty_frame = tk.Frame(left_frame, pady=5)
         qty_frame.pack(fill='x')
         ttk.Label(qty_frame, text="Qty:").pack(side='left')
@@ -215,6 +238,8 @@ class RestaurantApp:
         self.quantity_entry.insert(0, "1")
         self.quantity_entry.pack(side='left', padx=4)
         ttk.Button(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
+
+        self.addon_menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
 
         # Center: order tree, buttons and totals
         ttk.Label(center_frame, text="Current Order", style='Section.TLabel').pack(anchor='w')
@@ -277,18 +302,26 @@ class RestaurantApp:
 
     # --------------- Product / Stock ---------------
     def refresh_products(self):
-        if not self.backend.products:
+        if not self.backend.products or not self.backend.addons:
             self.backend.load()
-        if not self.menu_tree:
+        if not self.menu_tree or not self.addon_menu_tree:
             return
         for row in self.menu_tree.get_children():
             self.menu_tree.delete(row)
+        for row in self.addon_menu_tree.get_children():
+            self.addon_menu_tree.delete(row)
         for p in self.backend.products:
             # Category filtering skipped (no category field). Could be extended later.
             self.menu_tree.insert('', 'end', values=(getattr(p, 'prodID', getattr(p, 'id', '?')),
                                                      getattr(p, 'prodName', 'Unknown'),
                                                      f"${getattr(p, 'prodPrice', 0.0):.2f}",
                                                      getattr(p, 'prodStock', 0)))
+        for a in self.backend.addons:
+
+            self.addon_menu_tree.insert('', 'end', values=(getattr(a, 'addonID', getattr(a, 'id', '?')),
+                                                           getattr(a, 'addonName', 'Unknown'),
+                                                           f"${getattr(a, 'addonPrice', 0.0):.2f}",
+                                                           getattr(a, 'addonStock', 0)))
 
     def refresh_stock_display(self):
         if not self.stock_tree:
@@ -306,11 +339,16 @@ class RestaurantApp:
         self.current_category = None if category == 'All' else category
         self.refresh_products()
 
+    def tree_selected(self, event):
+        #print(event)
+        #print(whichOne)
+        self.activeTree = event.widget
+
     # --------------- Order Logic ---------------
     def add_to_order(self):
-        if not self.menu_tree:
+        if not self.activeTree:
             return
-        selection = self.menu_tree.selection()
+        selection = self.activeTree.selection()
         if not selection:
             messagebox.showwarning("No Selection", "Please select a menu item first.")
             return
@@ -322,17 +360,28 @@ class RestaurantApp:
         except ValueError:
             messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
             return
-        item_vals = self.menu_tree.item(selection[0], 'values')
-        pid = int(item_vals[0])
-        product = self.backend.get_product(pid)
-        if not product:
-            messagebox.showerror("Error", "Product not found.")
-            return
-        current_stock = getattr(product, 'prodStock', 0)
-        if current_stock < qty:
-            messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
-            return
-        self.order.add_item(product, qty)
+        item_vals = self.activeTree.item(selection[0], 'values')
+        iid = int(item_vals[0])
+        if self.activeTree == self.menu_tree:
+            item = self.backend.get_product(iid)
+            if not item:
+                messagebox.showerror("Error", "Product not found.")
+                return
+            current_stock = getattr(item, 'prodStock', 0)
+            if current_stock < qty:
+                messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+                return
+        else:
+            item = self.backend.get_addon(iid)
+            if not item:
+                messagebox.showerror("Error", "Product not found.")
+                return
+            current_stock = getattr(item, 'addonStock', 0)
+            if current_stock < qty:
+                messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+                return
+        
+        self.order.add_item(item, qty)
         self.update_order_tree()
         self.update_order_summary()
 
