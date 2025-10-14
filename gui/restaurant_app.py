@@ -88,6 +88,9 @@ class RestaurantApp:
         self.order_tree = None
         self.stock_tree = None
         self.quantity_entry = None
+        self.hold_list = None
+        self.held_orders = []  # Held orders storage
+        self.hold_seq = 1
 
         self.subtotal_var = tk.StringVar(value="Subtotal: $0.00")
         self.tax_var = tk.StringVar(value="Tax: $0.00")
@@ -207,6 +210,14 @@ class RestaurantApp:
         self.order_tree.configure(yscrollcommand=order_scroll.set)
         order_scroll.pack(side='right', fill='y')
 
+        # Small screen for Carry-Out orders
+        hold_frame = tk.LabelFrame(center_frame, text="Carry-Out Orders", padx=6, pady=6, font=("Segoe UI", 14, "bold"))
+        hold_frame.pack(fill='x', pady=(8, 0))
+        self.hold_list = ttk.Treeview(hold_frame, columns=("note",), show='headings', height=3)
+        self.hold_list.column("note", anchor='n')
+        self.hold_list.pack(fill='x')
+        self.hold_list.insert('', 'end', values=("No carry-out orders yet",))
+
         # Move buttons for more screen space
         bottom_frame = tk.Frame(center_frame, pady=5)
         bottom_frame.pack(fill='x')
@@ -246,7 +257,7 @@ class RestaurantApp:
         right_btns = tk.Frame(right_frame, pady=5)
         right_btns.pack(fill='x')
         ttk.Button(right_btns, text="Send to Kitchen", command=self.send_to_kitchen).pack(fill='x', pady=2)
-        ttk.Button(right_btns, text="Hold Order", command=self.hold_order).pack(fill='x', pady=2)
+        ttk.Button(right_btns, text="Carry-Out Order", command=self.hold_order).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Cancel Order", command=self.cancel_order).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Load Menu", command=self.reload_menu).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Update Stock", command=self.update_stock).pack(fill='x', pady=2)
@@ -396,7 +407,31 @@ class RestaurantApp:
         messagebox.showinfo("Kitchen", "Order sent to kitchen.")
 
     def hold_order(self):
-        messagebox.showinfo("Hold", "Order held.")
+        if not self.order.items:
+            messagebox.showinfo("Hold", "No items to hold.")
+            return
+        # Build a short summary note
+        subtotal = self.order.total()
+        note = f"Carry-Out Order #{self.hold_seq}: {len(self.order.items)} items, ${subtotal:.2f}"
+        try:
+            if self.hold_list is not None:
+                children = self.hold_list.get_children()
+                if children:
+                    first_vals = self.hold_list.item(children[0], 'values')
+                    if first_vals and first_vals[0] == "No carry-out orders yet":
+                        self.hold_list.delete(children[0])
+        except Exception:
+            pass
+        # Insert into Hold list, store snapshot
+        if self.hold_list is not None:
+            self.hold_list.insert('', 'end', values=(note,))
+        self.held_orders.append(list(self.order.items))
+        self.hold_seq += 1
+        # Clear current order UI
+        self.order = AppOrder()
+        self.update_order_tree()
+        self.update_order_summary()
+        messagebox.showinfo("Carry-Out", "Order moved to queue.")
 
     def cancel_order(self):
         if not self.order.items:
