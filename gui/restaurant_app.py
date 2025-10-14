@@ -286,32 +286,32 @@ class RestaurantApp:
         self.order_tree.configure(yscrollcommand=order_scroll.set)
         order_scroll.pack(side='right', fill='y')
 
-    # Small screen for Carry-Out orders (bold label)
-    hold_frame = tk.LabelFrame(center_frame, text="Carry-Out Orders", padx=6, pady=6, font=("Segoe UI", 14, "bold"))
-    hold_frame.pack(fill='x', pady=(8, 0))
-    self.hold_list = ttk.Treeview(hold_frame, columns=("note",), show='headings', height=3)
-    self.hold_list.column("note", anchor='w')
-    self.hold_list.pack(fill='x')
-    self.hold_list.insert('', 'end', values=("No carry-out orders yet",))
+        # Small screen for Carry-Out orders (bold label)
+        hold_frame = tk.LabelFrame(center_frame, text="Carry-Out Orders", padx=6, pady=6, font=("Segoe UI", 14, "bold"))
+        hold_frame.pack(fill='x', pady=(8, 0))
+        self.hold_list = ttk.Treeview(hold_frame, columns=("note",), show='headings', height=3)
+        self.hold_list.column("note", anchor='n')
+        self.hold_list.pack(fill='x')
+        self.hold_list.insert('', 'end', values=("No carry-out orders yet",))
 
-    # Buttons and totals (aligned with upstream layout)
-    btn_frame = tk.Frame(center_frame, pady=5)
-    btn_frame.pack(fill='x')
-    ttk.Button(btn_frame, text="Remove Sel.", command=self.remove_sel_item).pack(side='left') 
-    ttk.Button(btn_frame, text="Remove Last", command=self.remove_last_item).pack(side='left')
-    ttk.Button(btn_frame, text="Checkout", command=self.checkout_popup, takefocus=0).pack(side='left', padx=5)
-    ttk.Button(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
+        # Buttons and totals (aligned with upstream layout)
+        btn_frame = tk.Frame(center_frame, pady=5)
+        btn_frame.pack(fill='x')
+        ttk.Button(btn_frame, text="Remove Sel.", command=self.remove_sel_item).pack(side='left') 
+        ttk.Button(btn_frame, text="Remove Last", command=self.remove_last_item).pack(side='left')
+        ttk.Button(btn_frame, text="Checkout", command=self.checkout_popup, takefocus=0).pack(side='left', padx=5)
+        ttk.Button(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
 
-    # This might be useful for removing an item from the center order list. There is a function defined for this bind some ways below
-    '''
-    self.order_tree.bind("<<TreeviewSelect>>", self.centerpane_selected)
-    '''
-        
-    totals_frame = tk.Frame(center_frame, pady=5)
-    totals_frame.pack(fill='x')
-    ttk.Label(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
-    ttk.Label(totals_frame, textvariable=self.tax_var).pack(anchor='e')
-    ttk.Label(totals_frame, textvariable=self.total_var, style='Total.TLabel').pack(anchor='e')
+        # This might be useful for removing an item from the center order list. There is a function defined for this bind some ways below
+        '''
+        self.order_tree.bind("<<TreeviewSelect>>", self.centerpane_selected)
+        '''
+            
+        totals_frame = tk.Frame(center_frame, pady=5)
+        totals_frame.pack(fill='x')
+        ttk.Label(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
+        ttk.Label(totals_frame, textvariable=self.tax_var).pack(anchor='e')
+        ttk.Label(totals_frame, textvariable=self.total_var, style='Total.TLabel').pack(anchor='e')
 
         # Right: stock levels and actions
         ttk.Label(right_frame, text="Stock Levels", style='Section.TLabel').pack(anchor='w')
@@ -575,7 +575,7 @@ class RestaurantApp:
 
     def hold_order(self):
         if not self.order.items:
-            messagebox.showinfo("Hold", "No items to hold.")
+            messagebox.showinfo("Carry-Out", "No items to add to Carry-Out.")
             return
         # Build a short summary note
         subtotal = self.order.total()
@@ -589,7 +589,7 @@ class RestaurantApp:
                         self.hold_list.delete(children[0])
         except Exception:
             pass
-        # Insert into Hold list, store snapshot
+        # Insert into Hold(Carry-Out) list, store snapshot
         if self.hold_list is not None:
             self.hold_list.insert('', 'end', values=(note,))
         self.held_orders.append(list(self.order.items))
