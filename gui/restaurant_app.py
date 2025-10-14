@@ -71,6 +71,34 @@ class AppOrder:
         lines.append("-" * 28)
         lines.append(f"Subtotal: ${self.total():.2f}")
         return "\n".join(lines)
+    
+    def save_to_file(self, filename: str, tax: float = 0.0, tip: float = 0.0) -> None:
+        """Save the order details to a orders.txt with tax and tip included."""
+        from datetime import datetime
+        import os
+        order_number = 1
+        if os.path.exists(filename):
+            #count orders 
+            with open(filename, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                for line in lines:
+                    if line.startswith("Order #"):
+                        order_number += 1
+
+        subtotal = self.total()
+        total = subtotal + tax + tip
+
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write(f"Order #{order_number} — Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            for i, q in self.items:
+                name = getattr(i, 'prodName', getattr(i, 'addonName', 'Item'))
+                price = getattr(i, 'prodPrice', getattr(i, 'addonPrice', 0.0))
+                f.write(f"{name} x{q} @ ${price:.2f} = ${price * q:.2f}\n")
+            f.write(f"Subtotal: ${subtotal:.2f}\n")
+            f.write(f"Tax: ${tax:.2f}\n")
+            f.write(f"Tip: ${tip:.2f}\n")
+            f.write(f"Total: ${total:.2f}\n\n")
+
 
 class RestaurantApp:
     TAX_RATE = 0.07
@@ -352,7 +380,29 @@ class RestaurantApp:
                 pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
                 if pid_val is not None:
                     self.backend.reduce_stock(pid_val, q)
-            self.backend.save_products()
+                self.backend.save_products()
+
+            # Calculate subtotal and tax
+            subtotal = self.order.total()
+            tax = subtotal * self.TAX_RATE
+
+            # Ask user for tip
+            import tkinter.simpledialog as simpledialog
+            tip_str = simpledialog.askstring("Tip", "Enter tip amount ($):", initialvalue="0")
+            try:
+                tip = float(tip_str)
+                if tip < 0:
+                    tip = 0.0
+            except Exception:
+                tip = 0.0
+
+            total = subtotal + tax + tip
+
+            try:
+                self.order.save_to_file("DatabaseFiles/orders.txt", tax=tax, tip=tip)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save order: {e}")
+            
             self.refresh_products()
             self.refresh_stock_display()
             messagebox.showinfo("Done", "Order checked out. Stock updated.")
