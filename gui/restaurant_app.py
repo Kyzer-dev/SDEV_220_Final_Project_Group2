@@ -10,7 +10,7 @@ Category buttons are just filler (no category field yet). 'All' just reloads eve
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional, Any
-from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile 
+from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile, errorPopup
 
 # -------------- Connect to Backend --------------
 class BackendAdapter:
@@ -32,10 +32,20 @@ class BackendAdapter:
         self.handler.loadDataFile(defaultProductFile, "Product")
         self.handler.loadDataFile(defaultAddonFile, "Addon")
 
-    def get_product(self, pid: int):
+    def get_product(self, pid: int, val = 'prodID', searchFor = 'UNSET'):
         for p in self.handler.productList:
-            if getattr(p, 'prodID', None) == pid:
-                return p
+            if getattr(p, val, None) == pid:
+                if searchFor != 'UNSET':
+                    desiredValue = getattr(p, searchFor)
+                    return desiredValue
+                else:
+                    return p
+        return None
+    
+    def get_addon(self, aid: int, val = 'addonID'):
+        for a in self.handler.addonList:
+            if getattr(a, val, None) == aid:
+                return a
         return None
 
     def reduce_stock(self, pid: int, qty: int) -> bool:
@@ -52,12 +62,30 @@ class AppOrder:
     def __init__(self) -> None:
         self.items: list[tuple[Any, int]] = []
 
-    def add_item(self, item: Any, qty: int = 1) -> None:
-        self.items.append((item, qty))
+    def add_item(self, item: Any, qty: int = 1, itemType = 'Product') -> None:
+        if itemType == 'Product':
+            self.items.append((item, qty))
+        elif itemType == 'Addon':
+            '''This is here because I wanted to add a way to make addons stick out better versus normal items.
+            However, it seems to be changing the actual backend class info or something because it just keeps adding the '  +' for each entry.
+            If someone wants to figure it out, please do.'''
+            #newItem = item
+            #newName = "  +" + newItem.addonName
+            #newItem.addonName = newName
+            #self.items.append((newItem, qty))
+            self.items.append((item, qty))
+        # Check for if the item comes with addons by default, and if so, we need to add them.
+        
 
     def remove_last_item(self) -> None:
         if self.items:
             self.items.pop()
+
+    # This is the function for removing stuff from the center pane. Couldn't get it working properly so if someone else wants to do it, go ahead
+    '''
+    def remove_sel_item(self, itemToRemove: Any) -> None:
+        self.items.remove(itemToRemove)
+    '''
 
     def total(self) -> float:
         return sum(getattr(i, 'prodPrice', getattr(i, 'addonPrice', 0.0)) * q for i, q in self.items)
@@ -71,6 +99,34 @@ class AppOrder:
         lines.append("-" * 28)
         lines.append(f"Subtotal: ${self.total():.2f}")
         return "\n".join(lines)
+    
+    def save_to_file(self, filename: str, tax: float = 0.0, tip: float = 0.0) -> None:
+        """Save the order details to a orders.txt with tax and tip included."""
+        from datetime import datetime
+        import os
+        order_number = 1
+        if os.path.exists(filename):
+            #count orders 
+            with open(filename, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                for line in lines:
+                    if line.startswith("Order #"):
+                        order_number += 1
+
+        subtotal = self.total()
+        total = subtotal + tax + tip
+
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write(f"Order #{order_number} — Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            for i, q in self.items:
+                name = getattr(i, 'prodName', getattr(i, 'addonName', 'Item'))
+                price = getattr(i, 'prodPrice', getattr(i, 'addonPrice', 0.0))
+                f.write(f"{name} x{q} @ ${price:.2f} = ${price * q:.2f}\n")
+            f.write(f"Subtotal: ${subtotal:.2f}\n")
+            f.write(f"Tax: ${tax:.2f}\n")
+            f.write(f"Tip: ${tip:.2f}\n")
+            f.write(f"Total: ${total:.2f}\n\n")
+
 
 class RestaurantApp:
     TAX_RATE = 0.07
@@ -89,6 +145,7 @@ class RestaurantApp:
         self.stock_tree = None
         self.quantity_entry = None
         self.hold_list = None
+        self.activeTree = None
         self.held_orders = []  # Held orders storage
         self.hold_seq = 1
 
@@ -173,6 +230,7 @@ class RestaurantApp:
 
         menu_frame = tk.Frame(left_frame)
         menu_frame.pack(fill='both', expand=True)
+        ttk.Label(menu_frame, text="Products", style='Section.TLabel').pack()
         self.menu_tree = ttk.Treeview(menu_frame, columns=("id", "name", "price", "stock"), show='headings', height=12)
         for col, text, w in [("id", "ID", 40), ("name", "Name", 140), ("price", "Price", 70), ("stock", "Stock", 60)]:
             self.menu_tree.heading(col, text=text)
@@ -183,6 +241,22 @@ class RestaurantApp:
         self.menu_tree.configure(yscrollcommand=menu_scroll.set)
         menu_scroll.pack(side='right', fill='y')
 
+        self.menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
+        
+        # Addons menu, left side, basically the same as the product one above
+        addon_menu_frame = tk.Frame(left_frame)
+        addon_menu_frame.pack(fill='both', expand=True)
+        ttk.Label(addon_menu_frame, text="Addons / Mods", style='Section.TLabel').pack()
+        self.addon_menu_tree = ttk.Treeview(addon_menu_frame, columns=("id", "name", "price", "stock"), show='headings', height=12)
+        for col, text, w in [("id", "ID", 40), ("name", "Name", 140), ("price", "Price", 70), ("stock", "Stock", 60)]:
+            self.addon_menu_tree.heading(col, text=text)
+            self.addon_menu_tree.column(col, width=w, anchor='center')
+        self.addon_menu_tree.pack(side='left', fill='both', expand=True)
+        addon_menu_scroll = ttk.Scrollbar(addon_menu_frame, orient='vertical')
+        addon_menu_scroll.config(command=self.addon_menu_tree.yview)  # type: ignore[arg-type]
+        self.addon_menu_tree.configure(yscrollcommand=addon_menu_scroll.set)
+        addon_menu_scroll.pack(side='right', fill='y')
+
         qty_frame = tk.Frame(left_frame, pady=5)
         qty_frame.pack(fill='x')
         ttk.Label(qty_frame, text="Qty:").pack(side='left')
@@ -190,6 +264,8 @@ class RestaurantApp:
         self.quantity_entry.insert(0, "1")
         self.quantity_entry.pack(side='left', padx=4)
         ttk.Button(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
+
+        self.addon_menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
 
         # Center: order tree, buttons and totals
         ttk.Label(center_frame, text="Current Order", style='Section.TLabel').pack(anchor='w')
@@ -210,29 +286,32 @@ class RestaurantApp:
         self.order_tree.configure(yscrollcommand=order_scroll.set)
         order_scroll.pack(side='right', fill='y')
 
-        # Small screen for Carry-Out orders
-        hold_frame = tk.LabelFrame(center_frame, text="Carry-Out Orders", padx=6, pady=6, font=("Segoe UI", 14, "bold"))
-        hold_frame.pack(fill='x', pady=(8, 0))
-        self.hold_list = ttk.Treeview(hold_frame, columns=("note",), show='headings', height=3)
-        self.hold_list.column("note", anchor='n')
-        self.hold_list.pack(fill='x')
-        self.hold_list.insert('', 'end', values=("No carry-out orders yet",))
+    # Small screen for Carry-Out orders (bold label)
+    hold_frame = tk.LabelFrame(center_frame, text="Carry-Out Orders", padx=6, pady=6, font=("Segoe UI", 14, "bold"))
+    hold_frame.pack(fill='x', pady=(8, 0))
+    self.hold_list = ttk.Treeview(hold_frame, columns=("note",), show='headings', height=3)
+    self.hold_list.column("note", anchor='w')
+    self.hold_list.pack(fill='x')
+    self.hold_list.insert('', 'end', values=("No carry-out orders yet",))
 
-        # Move buttons for more screen space
-        bottom_frame = tk.Frame(center_frame, pady=5)
-        bottom_frame.pack(fill='x')
+    # Buttons and totals (aligned with upstream layout)
+    btn_frame = tk.Frame(center_frame, pady=5)
+    btn_frame.pack(fill='x')
+    ttk.Button(btn_frame, text="Remove Sel.", command=self.remove_sel_item).pack(side='left') 
+    ttk.Button(btn_frame, text="Remove Last", command=self.remove_last_item).pack(side='left')
+    ttk.Button(btn_frame, text="Checkout", command=self.checkout_popup, takefocus=0).pack(side='left', padx=5)
+    ttk.Button(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
 
-        btn_bar = tk.Frame(bottom_frame)
-        btn_bar.pack(side='left', anchor='w')
-        ttk.Button(btn_bar, text="Remove\nLast Item", command=self.remove_last_item).pack(side='left')
-        ttk.Button(btn_bar, text="Checkout", command=self.checkout_popup, takefocus=0).pack(side='left', padx=8)
-        ttk.Button(btn_bar, text="Print\nReceipt", command=self.print_receipt).pack(side='left')
-
-        totals_bar = tk.Frame(bottom_frame)
-        totals_bar.pack(side='right', anchor='e')
-        ttk.Label(totals_bar, textvariable=self.subtotal_var).pack(anchor='e')
-        ttk.Label(totals_bar, textvariable=self.tax_var).pack(anchor='e')
-        ttk.Label(totals_bar, textvariable=self.total_var, style='Total.TLabel').pack(anchor='e')
+    # This might be useful for removing an item from the center order list. There is a function defined for this bind some ways below
+    '''
+    self.order_tree.bind("<<TreeviewSelect>>", self.centerpane_selected)
+    '''
+        
+    totals_frame = tk.Frame(center_frame, pady=5)
+    totals_frame.pack(fill='x')
+    ttk.Label(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
+    ttk.Label(totals_frame, textvariable=self.tax_var).pack(anchor='e')
+    ttk.Label(totals_frame, textvariable=self.total_var, style='Total.TLabel').pack(anchor='e')
 
         # Right: stock levels and actions
         ttk.Label(right_frame, text="Stock Levels", style='Section.TLabel').pack(anchor='w')
@@ -264,18 +343,25 @@ class RestaurantApp:
 
     # --------------- Product / Stock ---------------
     def refresh_products(self):
-        if not self.backend.products:
+        if not self.backend.products or not self.backend.addons:
             self.backend.load()
-        if not self.menu_tree:
+        if not self.menu_tree or not self.addon_menu_tree:
             return
         for row in self.menu_tree.get_children():
             self.menu_tree.delete(row)
+        for row in self.addon_menu_tree.get_children():
+            self.addon_menu_tree.delete(row)
         for p in self.backend.products:
             # Category filtering skipped (no category field). Could be extended later.
             self.menu_tree.insert('', 'end', values=(getattr(p, 'prodID', getattr(p, 'id', '?')),
                                                      getattr(p, 'prodName', 'Unknown'),
                                                      f"${getattr(p, 'prodPrice', 0.0):.2f}",
                                                      getattr(p, 'prodStock', 0)))
+        for a in self.backend.addons:
+            self.addon_menu_tree.insert('', 'end', values=(getattr(a, 'addonID', getattr(a, 'id', '?')),
+                                                           getattr(a, 'addonName', 'Unknown'),
+                                                           f"${getattr(a, 'addonPrice', 0.0):.2f}",
+                                                           getattr(a, 'addonStock', 0)))
 
     def refresh_stock_display(self):
         if not self.stock_tree:
@@ -293,11 +379,21 @@ class RestaurantApp:
         self.current_category = None if category == 'All' else category
         self.refresh_products()
 
+    def tree_selected(self, event):
+        self.activeTree = event.widget
+
+    # Following might be useful for removing something from the list directly, not sure (there is a .bind call above for the center pane)
+    '''
+    def centerpane_selected(self, event):
+        self.selectedOrderItem = self.order_tree.selection()
+        print(self.selectedOrderItem)
+    '''
+
     # --------------- Order Logic ---------------
     def add_to_order(self):
-        if not self.menu_tree:
+        if not self.activeTree:
             return
-        selection = self.menu_tree.selection()
+        selection = self.activeTree.selection()
         if not selection:
             messagebox.showwarning("No Selection", "Please select a menu item first.")
             return
@@ -309,17 +405,60 @@ class RestaurantApp:
         except ValueError:
             messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
             return
-        item_vals = self.menu_tree.item(selection[0], 'values')
-        pid = int(item_vals[0])
-        product = self.backend.get_product(pid)
-        if not product:
-            messagebox.showerror("Error", "Product not found.")
-            return
-        current_stock = getattr(product, 'prodStock', 0)
-        if current_stock < qty:
-            messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
-            return
-        self.order.add_item(product, qty)
+        item_vals = self.activeTree.item(selection[0], 'values')
+        iid = int(item_vals[0])
+        if self.activeTree == self.menu_tree:
+            item = self.backend.get_product(iid)
+            if not item:
+                messagebox.showerror("Error", "Product not found.")
+                return
+            current_stock = getattr(item, 'prodStock', 0)
+            if current_stock < qty:
+                messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+                return
+
+            # Reused code from below for manually adding addons, could probably be done nicer with an external function
+            presetAddons = self.backend.get_product(item.prodID, 'prodID', 'prodPresetAddons')
+            if presetAddons == 'None': # If there's no prodPresetAddons, we just add it
+                self.commit_add_to_cart(item, qty)
+            else:
+                storedItem = item
+                presetAddons = presetAddons.split(',')
+                for i in range(qty):
+                    for a in presetAddons:
+                        try:
+                            a = int(a)
+                        except:
+                            errorPopup(1, RestaurantApp, "gui/restaraunt_app.py > def add_to_order > adding preset addons", "Someone didn't put in an integer for that menu item's prodPresetAddons. Get it fixed!")
+                            return
+                        item = self.backend.get_addon(a)
+                        if not item:
+                            messagebox.showerror("Error", "Product not found.")
+                            return
+                        current_stock = getattr(item, 'addonStock', 0)
+                        if current_stock < qty:
+                            messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+                            return
+                    # If we didn't return, we're good to add it to the cart.
+                    self.commit_add_to_cart(storedItem, 1)
+                    for a in presetAddons:
+                        a = int(a) # We would've errored out (returned) in the previous check to see if we had stock, so we can just do it here.
+                        item = self.backend.get_addon(a)
+                        self.commit_add_to_cart(item, 1, 'Addon')
+                    
+        else:
+            item = self.backend.get_addon(iid)
+            if not item:
+                messagebox.showerror("Error", "Product not found.")
+                return
+            current_stock = getattr(item, 'addonStock', 0)
+            if current_stock < qty:
+                messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+                return
+            self.commit_add_to_cart(item, qty, 'Addon')
+        
+    def commit_add_to_cart(self, item, qty = 1, itemType = 'Product'):
+        self.order.add_item(item, qty, itemType)
         self.update_order_tree()
         self.update_order_summary()
 
@@ -336,6 +475,12 @@ class RestaurantApp:
 
     def remove_last_item(self):
         self.order.remove_last_item()
+        self.update_order_tree()
+        self.update_order_summary()
+
+    # Someone do this please, there's a commented out centerpanes_selected, as well as a .bind for centerpane, and a func in Order (may or may not be useful)
+    def remove_sel_item(self):
+        
         self.update_order_tree()
         self.update_order_summary()
 
@@ -367,7 +512,29 @@ class RestaurantApp:
                 pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
                 if pid_val is not None:
                     self.backend.reduce_stock(pid_val, q)
-            self.backend.save_products()
+                self.backend.save_products()
+
+            # Calculate subtotal and tax
+            subtotal = self.order.total()
+            tax = subtotal * self.TAX_RATE
+
+            # Ask user for tip
+            import tkinter.simpledialog as simpledialog
+            tip_str = simpledialog.askstring("Tip", "Enter tip amount ($):", initialvalue="0")
+            try:
+                tip = float(tip_str)
+                if tip < 0:
+                    tip = 0.0
+            except Exception:
+                tip = 0.0
+
+            total = subtotal + tax + tip
+
+            try:
+                self.order.save_to_file("DatabaseFiles/orders.txt", tax=tax, tip=tip)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save order: {e}")
+            
             self.refresh_products()
             self.refresh_stock_display()
             messagebox.showinfo("Done", "Order checked out. Stock updated.")

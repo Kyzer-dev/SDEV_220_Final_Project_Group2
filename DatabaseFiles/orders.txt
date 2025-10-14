@@ -1,3 +1,61 @@
-ordID=2,prodID=0,prodName=CheeseBurger,prodPrice=4.99,addID=0,addPrice=1.5,subtotal=6.49,tax=0.45,tip=0.97,total=7.92
-ordID=3,prodID=0,prodName=Burger,prodPrice=5.99,addID=0,addPrice=1.5,subtotal=7.49,tax=0.52,tip=1.12,total=9.14
-ordID=4,prodID=0,prodName=VeganBurger,prodPrice=7.99,addID=0,addPrice=1.5,subtotal=9.49,tax=0.66,tip=1.42,total=11.58
+
+Order #1 — Timestamp: 2025-10-13 17:35:17
+Burger x5 @ $4.99 = $24.95
+Cheeseburger x5 @ $5.49 = $27.45
+Chicken Tenders x5 @ $5.99 = $29.95
+Veggie Burger x5 @ $5.99 = $29.95
+Double Cheeseburger x5 @ $7.99 = $39.95
+Subtotal: $152.25
+Tax: $10.66
+Tip: $0.00
+Total: $162.91
+
+Order #2 — Timestamp: 2025-10-13 17:35:50
+Chicken Tenders x5 @ $5.99 = $29.95
+Veggie Burger x5 @ $5.99 = $29.95
+Double Cheeseburger x5 @ $7.99 = $39.95
+Subtotal: $99.85
+Tax: $6.99
+Tip: $5.00
+Total: $111.84
+
+Order #3 — Timestamp: 2025-10-13 17:40:52
+Burger x1 @ $4.99 = $4.99
+Burger x1 @ $4.99 = $4.99
+Cheeseburger x1 @ $5.49 = $5.49
+Cheeseburger x1 @ $5.49 = $5.49
+Chicken Tenders x1 @ $5.99 = $5.99
+Chicken Tenders x1 @ $5.99 = $5.99
+Garden Salad x1 @ $4.49 = $4.49
+Bacon Cheeseburger x1 @ $8.49 = $8.49
+Subtotal: $45.92
+Tax: $3.21
+Tip: $3.00
+Total: $52.13
+
+Order #4 — Timestamp: 2025-10-13 17:55:05
+Chicken Sandwich x2 @ $6.49 = $12.98
+Chicken Sandwich x2 @ $6.49 = $12.98
+Subtotal: $25.96
+Tax: $1.82
+Tip: $20.00
+Total: $47.78
+
+Order #5 — Timestamp: 2025-10-13 18:06:01
+Chicken Sandwich x6 @ $6.49 = $38.94
+Subtotal: $38.94
+Tax: $2.73
+Tip: $10.00
+Total: $51.67
+
+Order #6 — Timestamp: 2025-10-13 18:15:29
+Chicken Sandwich x5 @ $6.49 = $32.45
+Burger x5 @ $4.99 = $24.95
+Burger x5 @ $4.99 = $24.95
+Cheeseburger x5 @ $5.49 = $27.45
+Cheeseburger x5 @ $5.49 = $27.45
+Subtotal: $137.25
+Tax: $9.61
+Tip: $7.00
+Total: $153.86
+
