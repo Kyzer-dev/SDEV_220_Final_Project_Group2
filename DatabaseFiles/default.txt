@@ -253,4 +253,28 @@ prodValidAddons=000,003,004,005,006,007,008,011
 prodImg=
 prodImgSmall=
 
+prodID=19
+prodName=The Flying Dutchman
+prodDesc=Two beef patties with cheese in between them.
+prodPrice=4.49
+prodStock=150
+prodSales=0
+prodBasedOn=0
+prodPresetAddons=000
+prodValidAddons=000,001,002,003,004,005,006,007,008,009,010,011,012
+prodImg=
+prodImgSmall=
+
+prodID=20
+prodName=Protein Style Burger
+prodDesc=A beef patty with lettuce as the buns.
+prodPrice=3.99
+prodStock=150
+prodSales=0
+prodBasedOn=0
+prodPresetAddons=000,001,002,003,004,005,007
+prodValidAddons=000,001,002,003,004,005,006,007,008,009,010,011,012
+prodImg=
+prodImgSmall=
+
 end_of_file
