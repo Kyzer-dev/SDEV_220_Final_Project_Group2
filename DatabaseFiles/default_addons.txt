@@ -97,4 +97,94 @@ prodSales=0
 prodImg=
 prodImgSmall=
 
+prodID=010
+prodName=Jalapeno
+prodDesc=Three jalapeno slices.
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=011
+prodName=Avocado
+prodDesc=Freshly smashed avocado.
+prodPrice=0
+prodStock=1500
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=012
+prodName=Mushroom
+prodDesc=Fresh mushroom slices.
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=013
+prodName=Fried Egg
+prodDesc=One fresh fried egg.
+prodPrice=0
+prodStock=1500
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=014
+prodName=Onion ring
+prodDesc=One crispy onion ring.
+prodPrice=0
+prodStock=1500
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=015
+prodName=Fry sauce
+prodDesc=Our famous fry sauce.
+prodPrice=0
+prodStock=1500
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=016
+prodName=Garlic aioli sauce
+prodDesc=A garlic aioli sauce.
+prodPrice=0
+prodStock=1500
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=017
+prodName=Sauteed onions
+prodDesc=Slimy sauteed onions.
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=018
+prodName=Guacamole
+prodDesc=Smashed guacamole.
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
+prodID=019
+prodName=Sauteed mushrooms
+prodDesc=Sliced sauteed mushrooms.
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
 end_of_file
