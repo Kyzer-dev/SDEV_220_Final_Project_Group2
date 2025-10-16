@@ -419,7 +419,7 @@ class RestaurantApp:
 
             # Reused code from below for manually adding addons, could probably be done nicer with an external function
             presetAddons = self.backend.get_product(item.prodID, 'prodID', 'prodPresetAddons')
-            if presetAddons == 'None': # If there's no prodPresetAddons, we just add it
+            if presetAddons == 'None' or presetAddons == '': # If there's no prodPresetAddons, we just add it
                 self.commit_add_to_cart(item, qty)
             else:
                 storedItem = item
