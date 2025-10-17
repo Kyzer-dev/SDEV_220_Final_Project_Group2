@@ -470,11 +470,19 @@ class RestaurantApp:
             return
         for row in self.order_tree.get_children():
             self.order_tree.delete(row)
-        for p, q in self.order.items:
-            price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
-            name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
+        # Build simple hierarchy for products and their addons
+        parent_id = None
+        for item, q in self.order.items:
+            is_addon = hasattr(item, 'addonPrice')
+            price_val = getattr(item, 'prodPrice', getattr(item, 'addonPrice', 0.0))
+            name_val = getattr(item, 'prodName', getattr(item, 'addonName', 'Item'))
             subtotal = price_val * q
-            self.order_tree.insert('', 'end', values=(name_val, q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+            if not is_addon:
+                parent_id = self.order_tree.insert('', 'end', text=name_val, values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+            else:
+                # Indent addons under the last product
+                parent = parent_id if parent_id else ''
+                self.order_tree.insert(parent, 'end', text=f"+ {name_val}", values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
 
     def remove_last_item(self):
         self.order.remove_last_item()
@@ -588,8 +596,10 @@ class RestaurantApp:
                 children = self.hold_list.get_children()
                 if children:
                     first_vals = self.hold_list.item(children[0], 'values')
-                    if first_vals and first_vals[0] == "No carry-out orders yet":
-                        self.hold_list.delete(children[0])
+                    if not first_vals:
+                        first_text = self.hold_list.item(children[0], 'text')
+                        if first_text == "No carry-out orders yet":
+                            self.hold_list.delete(children[0])
         except Exception:
             pass
         # Insert into Hold(Carry-Out) list, store snapshot
