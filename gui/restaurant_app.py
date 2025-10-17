@@ -241,6 +241,15 @@ class RestaurantApp:
         self.menu_tree.configure(yscrollcommand=menu_scroll.set)
         menu_scroll.pack(side='right', fill='y')
 
+    # Quantity and Add button directly under Products (same row)
+    qty_frame = tk.Frame(left_frame, pady=5)
+    qty_frame.pack(fill='x')
+    ttk.Label(qty_frame, text="Qty:").pack(side='left')
+    self.quantity_entry = ttk.Entry(qty_frame, width=6)
+    self.quantity_entry.insert(0, "1")
+    self.quantity_entry.pack(side='left', padx=4)
+    ttk.Button(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
+
         self.menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
         
         # Addons menu, left side, basically the same as the product one above
@@ -257,13 +266,6 @@ class RestaurantApp:
         self.addon_menu_tree.configure(yscrollcommand=addon_menu_scroll.set)
         addon_menu_scroll.pack(side='right', fill='y')
 
-        qty_frame = tk.Frame(left_frame, pady=5)
-        qty_frame.pack(fill='x')
-        ttk.Label(qty_frame, text="Qty:").pack(side='left')
-        self.quantity_entry = ttk.Entry(qty_frame, width=6)
-        self.quantity_entry.insert(0, "1")
-        self.quantity_entry.pack(side='left', padx=4)
-        ttk.Button(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
 
         self.addon_menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
 
