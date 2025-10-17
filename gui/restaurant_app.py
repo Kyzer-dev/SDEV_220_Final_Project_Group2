@@ -267,11 +267,16 @@ class RestaurantApp:
         self.addon_menu_tree.configure(yscrollcommand=addon_menu_scroll.set)
         addon_menu_scroll.pack(side='right', fill='y')
 
-
+        
         self.addon_menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
 
+        # Add Mod button
+        mod_btn_frame = tk.Frame(left_frame, pady=5)
+        mod_btn_frame.pack(fill='x')
+        ttk.Button(mod_btn_frame, text="Add Mod", command=self.add_mod, width=16).pack(side='bottom', padx=8)
+
         # Center: order tree, buttons and totals
-        ttk.Label(center_frame, text="Current Order", style='Section.TLabel').pack(anchor='w')
+        ttk.Label(center_frame, text= "Dine-In Order", style='Section.TLabel').pack(anchor='w')
         order_tree_frame = tk.Frame(center_frame)
         order_tree_frame.pack(fill='both', expand=True)
         # Initialize hierarchical order tree
@@ -296,6 +301,7 @@ class RestaurantApp:
         # Switch to tree-only view to show products as children under each carry-out order
         self.hold_list = ttk.Treeview(hold_frame, show='tree', height=4)
         self.hold_list.pack(fill='x')
+        self.hold_list.column("#0", anchor='center')
         self.hold_list.insert('', 'end', text="No carry-out orders yet")
 
         # Buttons and totals (aligned with upstream layout)
@@ -464,6 +470,38 @@ class RestaurantApp:
         self.order.add_item(item, qty, itemType)
         self.update_order_tree()
         self.update_order_summary()
+
+    def add_mod(self):
+        """Add the selected addon/mod dine-in order."""
+        if not hasattr(self, 'addon_menu_tree') or self.addon_menu_tree is None:
+            return
+        selection = self.addon_menu_tree.selection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select an addon/mod first.")
+            return
+        try:
+            assert self.quantity_entry is not None, "Quantity entry not initialized"
+            qty = int(self.quantity_entry.get())
+            if qty <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
+            return
+        item_vals = self.addon_menu_tree.item(selection[0], 'values')
+        try:
+            aid = int(item_vals[0])
+        except Exception:
+            messagebox.showerror("Error", "Could not read addon ID.")
+            return
+        addon = self.backend.get_addon(aid)
+        if not addon:
+            messagebox.showerror("Error", "Addon not found.")
+            return
+        current_stock = getattr(addon, 'addonStock', 0)
+        if current_stock < qty:
+            messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+            return
+        self.commit_add_to_cart(addon, qty, 'Addon')
 
     def update_order_tree(self):
         if not self.order_tree:
