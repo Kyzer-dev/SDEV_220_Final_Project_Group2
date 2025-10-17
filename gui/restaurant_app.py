@@ -602,9 +602,17 @@ class RestaurantApp:
                             self.hold_list.delete(children[0])
         except Exception:
             pass
-        # Insert into Hold(Carry-Out) list, store snapshot
+        # Insert into Hold(Carry-Out) list as a parent row, add item as a child
+        parent = None
         if self.hold_list is not None:
-            self.hold_list.insert('', 'end', values=(note,))
+            parent = self.hold_list.insert('', 'end', text=note)
+            # Add each item as a child row
+            for p, q in self.order.items:
+                price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
+                name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
+                is_addon = hasattr(p, 'addonPrice')
+                label = f"+ {name_val}" if is_addon else name_val
+                self.hold_list.insert(parent, 'end', text=f"{label} x{q} @ ${price_val:.2f}")
         self.held_orders.append(list(self.order.items))
         self.hold_seq += 1
         # Clear current order UI
