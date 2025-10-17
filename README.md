@@ -4,15 +4,19 @@
 Course project: loads a text "database" of menu items and gives you a basic ordering GUI.
 
 This version of the application uses the CustomTkinter python library, you can find the documentation and more information about CustomTkinter here: https://customtkinter.tomschimansky.com/
+
 View the Github page here: https://github.com/tomschimansky/customtkinter
 
-To use the version that does not require CustomTkinter please check out the repository located here: https://github.com/hligon35/SDEV220.git
+If Customtkinter is not installed or does not run properly, the application will attempt to run using the default tkinter library.
 
 Light Mode
-![Restaurant Ordering System photo (Light Mode)](image-2.png)
+![Restaurant Ordering System photo (Light Mode)](restaurant-ordering-system-lm.png)
 
 Dark Mode
-![Restaurant Ordering System photo (Dark Mode)](image-1.png)
+![Restaurant Ordering System photo (Dark Mode)](restaurant-ordering-system-dm.png)
+
+tkinter version
+![Restaurant Ordering System photo (tkinter version)](restaurant-ordering-system-tk.png)
 
 ## Install CustomTkinter library with pip:
 
@@ -49,5 +53,6 @@ python main.py --cli
 
 - `main.py` – launcher (GUI by default, CLI with `--cli`).
 - `gui/restaurant_app.py` – the Tkinter interface.
-- `models/` – inventory + product/addon + order classes.
+- `gui/custom_tkinter_restaurant_app.py` – the Customtkinter interface.
+- `restaraunt_systems` – inventoryhandler + product/addon classes.
 - `SDEV_220_Final_Project_Group2/DatabaseFiles/` – the text data files.

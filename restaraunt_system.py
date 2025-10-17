@@ -57,19 +57,6 @@ class Addon:
         self.addonImg = str(imgPath)
         self.addonImgSmall = str(imgSmallPath)
 
-class Order(Product, Addon):
-    #this references stuff from the products and addons so they use the same variable names
-    def __init__(self, ordID, prodID, prodPrice, addID, addPrice, finalPrice):
-        self.ordID = int(ordID)
-        Product.prodID = int(prodID)
-        Product.prodPrice = float(prodPrice)
-        Addon.addonID = int(addID)
-        Addon.addonPrice = float(addPrice)
-        self.finalPrice = float(finalPrice)
-
-        #Working on the calculation for the final price, this is all I have for now but I will continue to work on it
-        finalPrice += prodPrice + addPrice
-
 class InventoryHandler:
     def __init__(self):
         self.productFilePath = defaultProductFile # Initialize to the default products file; this is just done for reference.
@@ -216,7 +203,23 @@ if __name__ == "__main__":
     InvHandler.loadDataFile(defaultAddonFile, "Addon")
     InvHandler.learningHelper("Product")
     InvHandler.learningHelper("Addon")
-    InvHandler.updateStock("000", 2) # Example of adding 2 to the stock of product ID 000
-    InvHandler.updateStock("001", -2) # Example of adding 2 to the stock of product ID 001
-    InvHandler.updateStock("002", -6) # Example of subtracting 1 from the stock of product ID 003
+
+    #example stock update and commit
+    InvHandler.updateStock("000", 0) # Example of adding/subtracting to the stock of product ID 000 (replace 0 with a -/+ interger to add/subtract stock)
+    InvHandler.updateStock("001", 0) # Example of adding/subtracting to the stock of product ID 001
+    InvHandler.updateStock("002", 0) # Example of subtracting/subtracintg from the stock of product ID 003
     InvHandler.commitMultipleStock(["000", "001", "002"]) # This writes the stock changes back to the file.
+
+
+    #example order creation
+    
+    #order1 = Order(ordID=4, prodID=0, prodPrice=7.99, addID=0, addPrice=1.50, finalPrice=9.49, prodName="VeganBurger")
+    #order1.printReceipt()
+    #order1.saveToFile()
+
+    #load all orders from file
+
+    #all_orders = Order.loadFromFile()
+    #for o in all_orders:
+        #o.printReceipt()
+    
