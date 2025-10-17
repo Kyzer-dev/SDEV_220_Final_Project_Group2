@@ -15,7 +15,7 @@ Project started: 09/14/2025
     python main.py        # start the GUI
     python main.py --cli  # quick console test mode
 """
-from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile
+from restaraunt_system import InventoryHandler, defaultProductFile, defaultAddonFile # type: ignore
 import sys
 import traceback
 
@@ -36,19 +36,19 @@ def run_gui():
     try:
         import tkinter as tk  # type: ignore
     except Exception as e:  # pragma: no cover - environment specific
-        print("ERROR: Tkinter is not available on this Python installation.")
+        print("ERROR: Tkinter is not available. GUI cannot be started.")
         print(e)
         return
     
     try:
         import customtkinter as ctk  # type: ignore
     except Exception as e:  # pragma: no cover - environment specific
-        print("Customtkinter is not available on this Python installation. Running Tkinter version.")
+        print("Customtkinter is not available. Running Tkinter version.")
         try:
-            # Use package-qualified import so it works regardless of cwd.
+            # import the main GUI class
             from gui.restaurant_app import RestaurantApp  # type: ignore
         except ModuleNotFoundError as e:
-            print("ERROR: Could not import RestaurantApp. Make sure you run from the project root 'SDEV_220_Final_Project_Group2'.")
+            print("ERROR: Could not import RestaurantApp. Make sure you run from the project root.")
             print("If you ran using an absolute path with spaces, quote the path or cd into the folder first.")
             print(e)
             return
@@ -72,10 +72,10 @@ def run_gui():
         return
     
     try:
-        # Use package-qualified import so it works regardless of cwd.
+        # import the main GUI class
         from gui.custom_tkinter_restaurant_app import RestaurantApp  # type: ignore
     except ModuleNotFoundError as e:
-        print("ERROR: Could not import RestaurantApp. Make sure you run from the project root 'SDEV_220_Final_Project_Group2'.")
+        print("ERROR: Could not import RestaurantApp. Make sure you run from the project root.")
         print("If you ran using an absolute path with spaces, quote the path or cd into the folder first.")
         print(e)
         return
