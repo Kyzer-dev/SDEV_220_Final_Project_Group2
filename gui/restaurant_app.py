@@ -52,9 +52,49 @@ class BackendAdapter:
         # Negative reduces stock; InventoryHandler handles bounds
         return self.handler.updateStock(pid, -qty)
 
+    def reduce_addon_stock(self, aid: int, qty: int) -> bool:
+        """Reduce addon stock by the specified quantity."""
+        for addon in self.handler.addonList:
+            if addon.addonID == aid:
+                new_stock = addon.addonStock - qty
+                if new_stock < 0:
+                    print(f"Not enough addon stock for {addon.addonName}.")
+                    return False
+                addon.addonStock = new_stock
+                print(f"Updated {addon.addonName} addon stock to {addon.addonStock}.")
+                return True
+        print(f"Addon ID {aid} not found.")
+        return False
+
     def save_products(self) -> bool:
         ids = [str(p.prodID) for p in self.handler.productList]
         return self.handler.commitMultipleStock(ids)
+
+    def save_addons(self) -> bool:
+        """Save addon stock changes to file."""
+        try:
+            with open(self.handler.addonFilePath, "r") as f:
+                lines = f.readlines()
+
+            # Build a dict of addonID -> new stock
+            stock_map = {addon.addonID: addon.addonStock for addon in self.handler.addonList}
+            
+            in_addon = None
+            for i, line in enumerate(lines):
+                if line.startswith("addonID="):
+                    addon_id = int(line.split("=")[1].strip())
+                    in_addon = addon_id if addon_id in stock_map else None
+                elif in_addon is not None and line.startswith("addonStock="):
+                    lines[i] = f"addonStock={stock_map[in_addon]}\n"
+
+            with open(self.handler.addonFilePath, "w") as f:
+                f.writelines(lines)
+
+            print(f"Addon stock committed for addons: {', '.join(map(str, stock_map.keys()))}")
+            return True
+        except Exception as e:
+            print("Error committing addon stock:", e)
+            return False
 
 
 # -------------- Lightweight order local to GUI --------------
@@ -144,6 +184,12 @@ class RestaurantApp:
         self.order_tree = None
         self.stock_tree = None
         self.quantity_entry = None
+        self.hold_list = None
+        self.activeTree = None
+        self.selected_tree = None  # Track which tree has selection for removal
+        self.selected_item = None  # Track selected item for removal
+        self.held_orders = []  # Held orders storage
+        self.hold_seq = 1
 
         self.subtotal_var = tk.StringVar(value="Subtotal: $0.00")
         self.tax_var = tk.StringVar(value="Tax: $0.00")
@@ -237,6 +283,16 @@ class RestaurantApp:
         self.menu_tree.configure(yscrollcommand=menu_scroll.set)
         menu_scroll.pack(side='right', fill='y')
 
+        # Quantity and Add button directly under Products (same row)
+        qty_frame = tk.Frame(left_frame, pady=5)
+        qty_frame.pack(fill='x')
+        ttk.Label(qty_frame, text="Qty:").pack(side='left')
+        self.quantity_entry = ttk.Entry(qty_frame, width=6)
+        self.quantity_entry.insert(0, "1")
+        self.quantity_entry.pack(side='left', padx=4)
+        ttk.Button(qty_frame, text="Add to Dine-In", command=self.add_to_order, width=16).pack(side='left', padx=8)
+        ttk.Button(qty_frame, text="Add to Carry-Out", command=self.hold_order, width=16).pack(side='left', padx=8)
+
         self.menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
         
         # Addons menu, left side, basically the same as the product one above
@@ -253,26 +309,25 @@ class RestaurantApp:
         self.addon_menu_tree.configure(yscrollcommand=addon_menu_scroll.set)
         addon_menu_scroll.pack(side='right', fill='y')
 
-        qty_frame = tk.Frame(left_frame, pady=5)
-        qty_frame.pack(fill='x')
-        ttk.Label(qty_frame, text="Qty:").pack(side='left')
-        self.quantity_entry = ttk.Entry(qty_frame, width=6)
-        self.quantity_entry.insert(0, "1")
-        self.quantity_entry.pack(side='left', padx=4)
-        ttk.Button(qty_frame, text="Add to Order", command=self.add_to_order).pack(side='left', padx=10)
-
+        
         self.addon_menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
 
+        # Add Mod button
+        mod_btn_frame = tk.Frame(left_frame, pady=5)
+        mod_btn_frame.pack(fill='x')
+        ttk.Button(mod_btn_frame, text="Add Mod", command=self.add_mod, width=16).pack(side='bottom', padx=8)
+
         # Center: order tree, buttons and totals
-        ttk.Label(center_frame, text="Current Order", style='Section.TLabel').pack(anchor='w')
+        ttk.Label(center_frame, text= "Dine-In Order", style='Section.TLabel').pack(anchor='w')
         order_tree_frame = tk.Frame(center_frame)
         order_tree_frame.pack(fill='both', expand=True)
-        self.order_tree = ttk.Treeview(order_tree_frame, columns=("name", "qty", "price", "subtotal"), show='headings', height=14)
-        self.order_tree.heading("name", text="Item")
+        # Initialize hierarchical order tree
+        self.order_tree = ttk.Treeview(order_tree_frame, columns=("qty", "price", "subtotal"), show='tree headings', height=14)
+        self.order_tree.heading("#0", text="Item")
         self.order_tree.heading("qty", text="Qty")
         self.order_tree.heading("price", text="Price")
         self.order_tree.heading("subtotal", text="Subtotal")
-        self.order_tree.column("name", width=140)
+        self.order_tree.column("#0", width=160)
         self.order_tree.column("qty", width=40, anchor='center')
         self.order_tree.column("price", width=70, anchor='e')
         self.order_tree.column("subtotal", width=90, anchor='e')
@@ -282,6 +337,16 @@ class RestaurantApp:
         self.order_tree.configure(yscrollcommand=order_scroll.set)
         order_scroll.pack(side='right', fill='y')
 
+        # Small screen for Carry-Out orders (bold label)
+        hold_frame = tk.LabelFrame(center_frame, text="Carry-Out Orders", padx=6, pady=6, font=("Segoe UI", 14, "bold"))
+        hold_frame.pack(fill='x', pady=(8, 0))
+        # Switch to tree-only view to show products as children under each carry-out order
+        self.hold_list = ttk.Treeview(hold_frame, show='tree', height=4)
+        self.hold_list.pack(fill='x')
+        self.hold_list.column("#0", anchor='center')
+        self.hold_list.insert('', 'end', text="No carry-out orders yet")
+
+        # Buttons and totals (aligned with upstream layout)
         btn_frame = tk.Frame(center_frame, pady=5)
         btn_frame.pack(fill='x')
         ttk.Button(btn_frame, text="Remove Sel.", command=self.remove_sel_item).pack(side='left') 
@@ -290,10 +355,10 @@ class RestaurantApp:
         ttk.Button(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
 
         # This might be useful for removing an item from the center order list. There is a function defined for this bind some ways below
-        '''
+        # Bind selection events for remove
         self.order_tree.bind("<<TreeviewSelect>>", self.centerpane_selected)
-        '''
-        
+        self.hold_list.bind("<<TreeviewSelect>>", self.centerpane_selected)
+            
         totals_frame = tk.Frame(center_frame, pady=5)
         totals_frame.pack(fill='x')
         ttk.Label(totals_frame, textvariable=self.subtotal_var).pack(anchor='e')
@@ -323,7 +388,6 @@ class RestaurantApp:
         right_btns = tk.Frame(right_frame, pady=5)
         right_btns.pack(fill='x')
         ttk.Button(right_btns, text="Send to Kitchen", command=self.send_to_kitchen).pack(fill='x', pady=2)
-        ttk.Button(right_btns, text="Hold Order", command=self.hold_order).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Cancel Order", command=self.cancel_order).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Load Menu", command=self.reload_menu).pack(fill='x', pady=2)
         ttk.Button(right_btns, text="Update Stock", command=self.update_stock).pack(fill='x', pady=2)
@@ -369,12 +433,10 @@ class RestaurantApp:
     def tree_selected(self, event):
         self.activeTree = event.widget
 
-    # Following might be useful for removing something from the list directly, not sure (there is a .bind call above for the center pane)
-    '''
     def centerpane_selected(self, event):
-        self.selectedOrderItem = self.order_tree.selection()
-        print(self.selectedOrderItem)
-    '''
+        """Track which tree and item is selected for removal."""
+        self.selected_tree = event.widget
+        self.selected_item = self.selected_tree.selection()
 
     # --------------- Order Logic ---------------
     def add_to_order(self):
@@ -449,16 +511,56 @@ class RestaurantApp:
         self.update_order_tree()
         self.update_order_summary()
 
+    def add_mod(self):
+        """Add the selected addon/mod dine-in order."""
+        if not hasattr(self, 'addon_menu_tree') or self.addon_menu_tree is None:
+            return
+        selection = self.addon_menu_tree.selection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select an addon/mod first.")
+            return
+        try:
+            assert self.quantity_entry is not None, "Quantity entry not initialized"
+            qty = int(self.quantity_entry.get())
+            if qty <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
+            return
+        item_vals = self.addon_menu_tree.item(selection[0], 'values')
+        try:
+            aid = int(item_vals[0])
+        except Exception:
+            messagebox.showerror("Error", "Could not read addon ID.")
+            return
+        addon = self.backend.get_addon(aid)
+        if not addon:
+            messagebox.showerror("Error", "Addon not found.")
+            return
+        current_stock = getattr(addon, 'addonStock', 0)
+        if current_stock < qty:
+            messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+            return
+        self.commit_add_to_cart(addon, qty, 'Addon')
+
     def update_order_tree(self):
         if not self.order_tree:
             return
         for row in self.order_tree.get_children():
             self.order_tree.delete(row)
-        for p, q in self.order.items:
-            price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
-            name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
+        # Build simple hierarchy for products and their addons
+        parent_id = None
+        for item, q in self.order.items:
+            is_addon = hasattr(item, 'addonPrice')
+            price_val = getattr(item, 'prodPrice', getattr(item, 'addonPrice', 0.0))
+            name_val = getattr(item, 'prodName', getattr(item, 'addonName', 'Item'))
             subtotal = price_val * q
-            self.order_tree.insert('', 'end', values=(name_val, q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+            if not is_addon:
+                parent_id = self.order_tree.insert('', 'end', text=name_val, values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+            else:
+                # Indent addons under the last product
+                parent = parent_id if parent_id else ''
+                self.order_tree.insert(parent, 'end', text=f"+ {name_val}", values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
 
     def remove_last_item(self):
         self.order.remove_last_item()
@@ -467,9 +569,70 @@ class RestaurantApp:
 
     # Someone do this please, there's a commented out centerpanes_selected, as well as a .bind for centerpane, and a func in Order (may or may not be useful)
     def remove_sel_item(self):
-        
+        """Remove the selected item from dine-in order or carry-out orders."""
+        if not hasattr(self, 'selected_tree') or not hasattr(self, 'selected_item'):
+            messagebox.showwarning("No Selection", "Please select an item to remove first.")
+            return
+            
+        if not self.selected_item:
+            messagebox.showwarning("No Selection", "Please select an item to remove first.")
+            return
+            
+        if self.selected_tree == self.order_tree:
+            # Remove from dine-in order
+            self._remove_from_dine_in()
+        elif self.selected_tree == self.hold_list:
+            # Remove from carry-out orders
+            self._remove_from_carry_out()
+            
         self.update_order_tree()
         self.update_order_summary()
+
+    def _remove_from_dine_in(self):
+        """Remove selected item from the dine-in order."""
+        if not self.order.items:
+            return
+            
+        # Get the index of the selected item in the tree
+        selected_id = self.selected_item[0]
+        all_items = self.order_tree.get_children()
+        
+        # Find the index of the selected item
+        try:
+            item_index = all_items.index(selected_id)
+            # Remove the item from the order
+            if item_index < len(self.order.items):
+                removed_item = self.order.items.pop(item_index)
+                messagebox.showinfo("Removed", f"Removed {getattr(removed_item[0], 'prodName', getattr(removed_item[0], 'addonName', 'Item'))} from dine-in order.")
+        except (ValueError, IndexError):
+            messagebox.showerror("Error", "Could not remove selected item.")
+
+    def _remove_from_carry_out(self):
+        """Remove selected item or order from carry-out orders."""
+        selected_id = self.selected_item[0]
+        
+        # Check if it's a parent (order) or child (item)
+        parent = self.hold_list.parent(selected_id)
+        
+        if not parent:  # It's a parent (entire carry-out order)
+            # Get all children of this order
+            all_orders = self.hold_list.get_children()
+            try:
+                order_index = all_orders.index(selected_id)
+                if order_index < len(self.held_orders):
+                    self.held_orders.pop(order_index)
+                    self.hold_list.delete(selected_id)
+                    messagebox.showinfo("Removed", "Removed carry-out order.")
+                    
+                    # If no more orders, show placeholder
+                    if not self.held_orders:
+                        self.hold_list.insert('', 'end', text="No carry-out orders yet")
+            except (ValueError, IndexError):
+                messagebox.showerror("Error", "Could not remove selected order.")
+        else:
+            # It's a child item - for now just show a message
+            # (Removing individual items from carry-out orders would require more complex logic)
+            messagebox.showinfo("Info", "To modify carry-out orders, please remove the entire order and re-add it.")
 
     def update_order_summary(self):
         subtotal = self.order.total()
@@ -558,10 +721,84 @@ class RestaurantApp:
 
     # --------------- Right Buttons ---------------
     def send_to_kitchen(self):
-        messagebox.showinfo("Kitchen", "Order sent to kitchen.")
+        if not self.order.items:
+            messagebox.showinfo("Kitchen", "No order to send to kitchen.")
+            return
+
+        # Reduce stock for all items (both products and addons)
+        for item, qty in self.order.items:
+            is_addon = hasattr(item, 'addonPrice')
+            
+            if is_addon:
+                # It's an addon
+                aid = getattr(item, 'addonID', None)
+                if aid is not None:
+                    success = self.backend.reduce_addon_stock(aid, qty)
+                    if not success:
+                        messagebox.showerror("Stock Error", 
+                            f"Not enough stock for addon: {getattr(item, 'addonName', 'Unknown')}")
+                        return
+            else:
+                # It's a product
+                pid = getattr(item, 'prodID', None)
+                if pid is not None:
+                    success = self.backend.reduce_stock(pid, qty)
+                    if not success:
+                        messagebox.showerror("Stock Error", 
+                            f"Not enough stock for product: {getattr(item, 'prodName', 'Unknown')}")
+                        return
+
+        # Save all changes to files
+        self.backend.save_products()
+        self.backend.save_addons()
+        
+        # Refresh displays
+        self.refresh_products()
+        self.refresh_stock_display()
+        
+        # Clear the order and update UI
+        self.order = AppOrder()
+        self.update_order_tree()
+        self.update_order_summary()
+        
+        messagebox.showinfo("Kitchen", "Order sent to kitchen! Stock updated.")
 
     def hold_order(self):
-        messagebox.showinfo("Hold", "Order held.")
+        if not self.order.items:
+            messagebox.showinfo("Carry-Out", "No items to add to Carry-Out.")
+            return
+        # Build a short summary note
+        subtotal = self.order.total()
+        note = f"Carry-Out Order #{self.hold_seq}: {len(self.order.items)} items, ${subtotal:.2f}"
+        try:
+            if self.hold_list is not None:
+                children = self.hold_list.get_children()
+                if children:
+                    first_vals = self.hold_list.item(children[0], 'values')
+                    if not first_vals:
+                        first_text = self.hold_list.item(children[0], 'text')
+                        if first_text == "No carry-out orders yet":
+                            self.hold_list.delete(children[0])
+        except Exception:
+            pass
+        # Insert into Hold(Carry-Out) list as a parent row, add item as a child
+        parent = None
+        if self.hold_list is not None:
+            parent = self.hold_list.insert('', 'end', text=note)
+            # Add each item as a child row
+            for p, q in self.order.items:
+                price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
+                name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
+                is_addon = hasattr(p, 'addonPrice')
+                label = f"+ {name_val}" if is_addon else name_val
+                self.hold_list.insert(parent, 'end', text=f"{label} x{q} @ ${price_val:.2f}")
+        self.held_orders.append(list(self.order.items))
+        self.hold_seq += 1
+        # Clear current order UI
+        self.order = AppOrder()
+        self.update_order_tree()
+        self.update_order_summary()
+        messagebox.showinfo("Carry-Out", "Order moved to queue.")
 
     def cancel_order(self):
         if not self.order.items:
