@@ -315,9 +315,9 @@ class RestaurantApp:
         ttk.Button(btn_frame, text="Print Receipt", command=self.print_receipt).pack(side='left')
 
         # This might be useful for removing an item from the center order list. There is a function defined for this bind some ways below
-        '''
+        # Bind selection events for remove
         self.order_tree.bind("<<TreeviewSelect>>", self.centerpane_selected)
-        '''
+        self.hold_list.bind("<<TreeviewSelect>>", self.centerpane_selected)
             
         totals_frame = tk.Frame(center_frame, pady=5)
         totals_frame.pack(fill='x')
@@ -393,12 +393,10 @@ class RestaurantApp:
     def tree_selected(self, event):
         self.activeTree = event.widget
 
-    # Following might be useful for removing something from the list directly, not sure (there is a .bind call above for the center pane)
-    '''
     def centerpane_selected(self, event):
-        self.selectedOrderItem = self.order_tree.selection()
-        print(self.selectedOrderItem)
-    '''
+        """Track which tree and item is selected for removal."""
+        self.selected_tree = event.widget
+        self.selected_item = self.selected_tree.selection()
 
     # --------------- Order Logic ---------------
     def add_to_order(self):
