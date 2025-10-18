@@ -187,4 +187,13 @@ prodSales=0
 prodImg=
 prodImgSmall=
 
+prodID=020
+prodName=Tartar sauce
+prodDesc=A squirt of tartar sauce. 
+prodPrice=0
+prodStock=2000
+prodSales=0
+prodImg=
+prodImgSmall=
+
 end_of_file
