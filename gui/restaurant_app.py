@@ -52,9 +52,49 @@ class BackendAdapter:
         # Negative reduces stock; InventoryHandler handles bounds
         return self.handler.updateStock(pid, -qty)
 
+    def reduce_addon_stock(self, aid: int, qty: int) -> bool:
+        """Reduce addon stock by the specified quantity."""
+        for addon in self.handler.addonList:
+            if addon.addonID == aid:
+                new_stock = addon.addonStock - qty
+                if new_stock < 0:
+                    print(f"Not enough addon stock for {addon.addonName}.")
+                    return False
+                addon.addonStock = new_stock
+                print(f"Updated {addon.addonName} addon stock to {addon.addonStock}.")
+                return True
+        print(f"Addon ID {aid} not found.")
+        return False
+
     def save_products(self) -> bool:
         ids = [str(p.prodID) for p in self.handler.productList]
         return self.handler.commitMultipleStock(ids)
+
+    def save_addons(self) -> bool:
+        """Save addon stock changes to file."""
+        try:
+            with open(self.handler.addonFilePath, "r") as f:
+                lines = f.readlines()
+
+            # Build a dict of addonID -> new stock
+            stock_map = {addon.addonID: addon.addonStock for addon in self.handler.addonList}
+            
+            in_addon = None
+            for i, line in enumerate(lines):
+                if line.startswith("addonID="):
+                    addon_id = int(line.split("=")[1].strip())
+                    in_addon = addon_id if addon_id in stock_map else None
+                elif in_addon is not None and line.startswith("addonStock="):
+                    lines[i] = f"addonStock={stock_map[in_addon]}\n"
+
+            with open(self.handler.addonFilePath, "w") as f:
+                f.writelines(lines)
+
+            print(f"Addon stock committed for addons: {', '.join(map(str, stock_map.keys()))}")
+            return True
+        except Exception as e:
+            print("Error committing addon stock:", e)
+            return False
 
 
 # -------------- Lightweight order local to GUI --------------
@@ -681,7 +721,47 @@ class RestaurantApp:
 
     # --------------- Right Buttons ---------------
     def send_to_kitchen(self):
-        messagebox.showinfo("Kitchen", "Order sent to kitchen.")
+        if not self.order.items:
+            messagebox.showinfo("Kitchen", "No order to send to kitchen.")
+            return
+
+        # Reduce stock for all items (both products and addons)
+        for item, qty in self.order.items:
+            is_addon = hasattr(item, 'addonPrice')
+            
+            if is_addon:
+                # It's an addon
+                aid = getattr(item, 'addonID', None)
+                if aid is not None:
+                    success = self.backend.reduce_addon_stock(aid, qty)
+                    if not success:
+                        messagebox.showerror("Stock Error", 
+                            f"Not enough stock for addon: {getattr(item, 'addonName', 'Unknown')}")
+                        return
+            else:
+                # It's a product
+                pid = getattr(item, 'prodID', None)
+                if pid is not None:
+                    success = self.backend.reduce_stock(pid, qty)
+                    if not success:
+                        messagebox.showerror("Stock Error", 
+                            f"Not enough stock for product: {getattr(item, 'prodName', 'Unknown')}")
+                        return
+
+        # Save all changes to files
+        self.backend.save_products()
+        self.backend.save_addons()
+        
+        # Refresh displays
+        self.refresh_products()
+        self.refresh_stock_display()
+        
+        # Clear the order and update UI
+        self.order = AppOrder()
+        self.update_order_tree()
+        self.update_order_summary()
+        
+        messagebox.showinfo("Kitchen", "Order sent to kitchen! Stock updated.")
 
     def hold_order(self):
         if not self.order.items:
