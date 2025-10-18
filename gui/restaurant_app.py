@@ -446,17 +446,17 @@ class RestaurantApp:
         if not selection:
             messagebox.showwarning("No Selection", "Please select a menu item first.")
             return
-        try:
-            assert self.quantity_entry is not None, "Quantity entry not initialized"
-            qty = int(self.quantity_entry.get())
-            if qty <= 0:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
-            return
         item_vals = self.activeTree.item(selection[0], 'values')
         iid = int(item_vals[0])
         if self.activeTree == self.menu_tree:
+            try:
+                assert self.quantity_entry is not None, "Quantity entry not initialized"
+                qty = int(self.quantity_entry.get())
+                if qty <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
+                return
             item = self.backend.get_product(iid)
             if not item:
                 messagebox.showerror("Error", "Product not found.")
@@ -496,15 +496,8 @@ class RestaurantApp:
                         self.commit_add_to_cart(item, 1, 'Addon')
                     
         else:
-            item = self.backend.get_addon(iid)
-            if not item:
-                messagebox.showerror("Error", "Product not found.")
-                return
-            current_stock = getattr(item, 'addonStock', 0)
-            if current_stock < qty:
-                messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
-                return
-            self.commit_add_to_cart(item, qty, 'Addon')
+            self.add_mod()
+            return
         
     def commit_add_to_cart(self, item, qty = 1, itemType = 'Product'):
         self.order.add_item(item, qty, itemType)
@@ -519,14 +512,6 @@ class RestaurantApp:
         if not selection:
             messagebox.showwarning("No Selection", "Please select an addon/mod first.")
             return
-        try:
-            assert self.quantity_entry is not None, "Quantity entry not initialized"
-            qty = int(self.quantity_entry.get())
-            if qty <= 0:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
-            return
         item_vals = self.addon_menu_tree.item(selection[0], 'values')
         try:
             aid = int(item_vals[0])
@@ -538,10 +523,10 @@ class RestaurantApp:
             messagebox.showerror("Error", "Addon not found.")
             return
         current_stock = getattr(addon, 'addonStock', 0)
-        if current_stock < qty:
-            messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+        if current_stock < 1:
+            messagebox.showinfo("Out of Stock", f"No stock left for {getattr(addon, 'addonName', 'Addon')}")
             return
-        self.commit_add_to_cart(addon, qty, 'Addon')
+        self.commit_add_to_cart(addon, 1, 'Addon')
 
     def update_order_tree(self):
         if not self.order_tree:
