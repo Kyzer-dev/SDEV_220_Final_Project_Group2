@@ -1,3 +1,15 @@
+'''
+Group 2 Final Project: Restaraunt System
+Riley, Nhan, Joey, Ashton, Harold, Jake
+
+This program is an all-in-one point-of-sale system which has/can:
+A GUI, load products from a text file, make customer orders,
+save past orders to (a) file(s), update stock in the database file 
+when orders are completed, etc.
+
+Project started: 09/14/2025
+'''
+
 """Simple app launcher.
 
     python main.py        # start the GUI
@@ -27,9 +39,41 @@ def run_gui():
         print("ERROR: Tkinter is not available. GUI cannot be started.")
         print(e)
         return
+    
+    try:
+        import customtkinter as ctk  # type: ignore
+    except Exception as e:  # pragma: no cover - environment specific
+        print("Customtkinter is not available. Running Tkinter version.")
+        try:
+            # import the main GUI class
+            from gui.restaurant_app import RestaurantApp  # type: ignore
+        except ModuleNotFoundError as e:
+            print("ERROR: Could not import RestaurantApp. Make sure you run from the project root.")
+            print("If you ran using an absolute path with spaces, quote the path or cd into the folder first.")
+            print(e)
+            return
+        except Exception as e:  # unexpected import error
+            print("Unexpected error importing GUI module:")
+            traceback.print_exc()
+            return
+
+        root = tk.Tk()
+        root.title("Restaurant Ordering System")
+        
+        try:
+            _app = RestaurantApp(root)
+        except Exception:
+            print("Unexpected error constructing RestaurantApp. Traceback below:")
+            traceback.print_exc()
+            root.destroy()
+            return
+        root.minsize(1050, 600)
+        root.mainloop()
+        return
+    
     try:
         # import the main GUI class
-        from gui.restaurant_app import RestaurantApp  # type: ignore
+        from gui.custom_tkinter_restaurant_app import RestaurantApp  # type: ignore
     except ModuleNotFoundError as e:
         print("ERROR: Could not import RestaurantApp. Make sure you run from the project root.")
         print("If you ran using an absolute path with spaces, quote the path or cd into the folder first.")
@@ -40,7 +84,7 @@ def run_gui():
         traceback.print_exc()
         return
 
-    root = tk.Tk()
+    root = ctk.CTk()
     root.title("Restaurant Ordering System")
     try:
         _app = RestaurantApp(root)
