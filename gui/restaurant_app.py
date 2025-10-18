@@ -847,41 +847,60 @@ class RestaurantApp:
         messagebox.showinfo("Kitchen", "Order sent to kitchen! Stock updated.")
 
     def hold_order(self):
-        if not self.order.items:
-            messagebox.showinfo("Carry-Out", "No items to add to Carry-Out.")
+        if self.order.items:
+            messagebox.showinfo("Carry-Out", "Finish or clear Dine-In before adding to Carry-Out.")
             return
-        # Build a short summary note
-        subtotal = self.order.total()
-        note = f"Carry-Out Order #{self.hold_seq}: {len(self.order.items)} items, ${subtotal:.2f}"
+
+        # Require a selected product
+        if not self.menu_tree:
+            return
+        sel = self.menu_tree.selection()
+        if not sel:
+            messagebox.showwarning("No Selection", "Select a product to add to Carry-Out.")
+            return
+        vals = self.menu_tree.item(sel[0], 'values')
+        try:
+            pid = int(vals[0])
+        except Exception:
+            messagebox.showerror("Error", "Could not read product ID.")
+            return
+        prod = self.backend.get_product(pid)
+        if not prod:
+            messagebox.showerror("Error", "Product not found.")
+            return
+        try:
+            qty = int(self.quantity_entry.get()) if self.quantity_entry else 1
+            if qty <= 0:
+                raise ValueError
+        except Exception:
+            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
+            return
+        stock = getattr(prod, 'prodStock', 0)
+        if stock < qty:
+            messagebox.showinfo("Out of Stock", f"Only {stock} left in stock.")
+            return
+
         try:
             if self.hold_list is not None:
                 children = self.hold_list.get_children()
                 if children:
-                    first_vals = self.hold_list.item(children[0], 'values')
-                    if not first_vals:
-                        first_text = self.hold_list.item(children[0], 'text')
-                        if first_text == "No carry-out orders yet":
-                            self.hold_list.delete(children[0])
+                    if self.hold_list.item(children[0], 'text') == "No carry-out orders yet":
+                        self.hold_list.delete(children[0])
         except Exception:
             pass
-        # Insert into Hold(Carry-Out) list as a parent row, add item as a child
+
+        # Create carry-out order
+        price_val = getattr(prod, 'prodPrice', 0.0)
+        subtotal = price_val * qty
+        note = f"Carry-Out Order #{self.hold_seq}: 1 items, ${subtotal:.2f}"
         parent = None
         if self.hold_list is not None:
             parent = self.hold_list.insert('', 'end', text=note)
-            # Add each item as a child row
-            for p, q in self.order.items:
-                price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
-                name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
-                is_addon = hasattr(p, 'addonPrice')
-                label = f"+ {name_val}" if is_addon else name_val
-                self.hold_list.insert(parent, 'end', text=f"{label} x{q} @ ${price_val:.2f}")
-        self.held_orders.append(list(self.order.items))
+            name_val = getattr(prod, 'prodName', 'Item')
+            self.hold_list.insert(parent, 'end', text=f"{name_val} x{qty} @ ${price_val:.2f}")
+        self.held_orders.append([(prod, qty)])
         self.hold_seq += 1
-        # Clear current order UI
-        self.order = AppOrder()
-        self.update_order_tree()
-        self.update_order_summary()
-        messagebox.showinfo("Carry-Out", "Order moved to queue.")
+        messagebox.showinfo("Carry-Out", "Added to carry-out queue.")
 
     def cancel_order(self):
         if not self.order.items:
