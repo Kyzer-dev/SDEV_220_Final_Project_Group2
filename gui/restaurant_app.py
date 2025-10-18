@@ -542,15 +542,16 @@ class RestaurantApp:
         if not self.order_tree:
             return
         # Preserve open parents
-        prev_open_indices: set[int] = set()
+        prev_open_ids: set[int] = set()
         try:
             for iid in self.order_tree.get_children(''):
                 if self.order_tree.item(iid, 'open'):
                     info = self.tree_index_map.get(iid)
                     if info and not info.get('is_addon', False):
                         idx = info.get('index')
-                        if isinstance(idx, int):
-                            prev_open_indices.add(idx)
+                        if isinstance(idx, int) and 0 <= idx < len(self.order.items):
+                            obj = self.order.items[idx][0]
+                            prev_open_ids.add(id(obj))
         except Exception:
             pass
 
@@ -572,7 +573,7 @@ class RestaurantApp:
                 self.tree_index_map[parent_id] = {'index': idx, 'is_addon': False}
                 # Restore open state
                 try:
-                    if idx in prev_open_indices:
+                    if id(item) in prev_open_ids:
                         self.order_tree.item(parent_id, open=True)
                 except Exception:
                     pass
@@ -590,20 +591,21 @@ class RestaurantApp:
     # Someone do this please, there's a commented out centerpanes_selected, as well as a .bind for centerpane, and a func in Order (may or may not be useful)
     def remove_sel_item(self):
         """Remove the selected item from dine-in order or carry-out orders."""
-        if not hasattr(self, 'selected_tree') or not hasattr(self, 'selected_item'):
-            messagebox.showwarning("No Selection", "Please select an item to remove first.")
-            return
-            
-        if not self.selected_item:
-            messagebox.showwarning("No Selection", "Please select an item to remove first.")
-            return
-            
-        if self.selected_tree == self.order_tree:
-            # Remove from dine-in order
+        if self.order_tree is not None and self.order_tree.selection():
             self._remove_from_dine_in()
-        elif self.selected_tree == self.hold_list:
-            # Remove from carry-out orders
+        elif self.hold_list is not None and self.hold_list.selection():
             self._remove_from_carry_out()
+        else:
+            if not hasattr(self, 'selected_item') or not self.selected_item:
+                messagebox.showwarning("No Selection", "Please select an item to remove first.")
+                return
+            if self.selected_tree == self.order_tree:
+                self._remove_from_dine_in()
+            elif self.selected_tree == self.hold_list:
+                self._remove_from_carry_out()
+            else:
+                messagebox.showwarning("No Selection", "Please select an item to remove first.")
+                return
             
         self.update_order_tree()
         self.update_order_summary()
