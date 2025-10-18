@@ -59,3 +59,11 @@ Tax: $9.61
 Tip: $7.00
 Total: $153.86
 
+Order #7 — Timestamp: 2025-10-17 22:46:30
+Double Cheeseburger x1 @ $7.99 = $7.99
+Cheese x1 @ $0.50 = $0.50
+Subtotal: $8.49
+Tax: $0.59
+Tip: $0.00
+Total: $9.08
+
