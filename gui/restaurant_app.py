@@ -541,21 +541,46 @@ class RestaurantApp:
     def update_order_tree(self):
         if not self.order_tree:
             return
+        # Preserve open parents
+        prev_open_indices: set[int] = set()
+        try:
+            for iid in self.order_tree.get_children(''):
+                if self.order_tree.item(iid, 'open'):
+                    info = self.tree_index_map.get(iid)
+                    if info and not info.get('is_addon', False):
+                        idx = info.get('index')
+                        if isinstance(idx, int):
+                            prev_open_indices.add(idx)
+        except Exception:
+            pass
+
+        # Rebuild
         for row in self.order_tree.get_children():
             self.order_tree.delete(row)
-        # Build simple hierarchy for products and their addons
-        parent_id = None
-        for item, q in self.order.items:
+        self.tree_index_map = {}
+        parent_id: Optional[str] = None
+        parent_index: Optional[int] = None
+        for idx, (item, q) in enumerate(self.order.items):
             is_addon = hasattr(item, 'addonPrice')
             price_val = getattr(item, 'prodPrice', getattr(item, 'addonPrice', 0.0))
             name_val = getattr(item, 'prodName', getattr(item, 'addonName', 'Item'))
             subtotal = price_val * q
             if not is_addon:
                 parent_id = self.order_tree.insert('', 'end', text=name_val, values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+                parent_index = idx
+                # map parent
+                self.tree_index_map[parent_id] = {'index': idx, 'is_addon': False}
+                # Restore open state
+                try:
+                    if idx in prev_open_indices:
+                        self.order_tree.item(parent_id, open=True)
+                except Exception:
+                    pass
             else:
-                # Indent addons under the last product
+                # Indent addons under the last product (if present)
                 parent = parent_id if parent_id else ''
-                self.order_tree.insert(parent, 'end', text=f"+ {name_val}", values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+                child_id = self.order_tree.insert(parent, 'end', text=f"+ {name_val}", values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+                self.tree_index_map[child_id] = {'index': idx, 'is_addon': True}
 
     def remove_last_item(self):
         self.order.remove_last_item()
@@ -585,22 +610,44 @@ class RestaurantApp:
 
     def _remove_from_dine_in(self):
         """Remove selected item from the dine-in order."""
-        if not self.order.items:
+        if not self.order.items or not self.selected_item:
             return
-            
-        # Get the index of the selected item in the tree
+
         selected_id = self.selected_item[0]
-        all_items = self.order_tree.get_children()
-        
-        # Find the index of the selected item
-        try:
-            item_index = all_items.index(selected_id)
-            # Remove the item from the order
-            if item_index < len(self.order.items):
-                removed_item = self.order.items.pop(item_index)
-                messagebox.showinfo("Removed", f"Removed {getattr(removed_item[0], 'prodName', getattr(removed_item[0], 'addonName', 'Item'))} from dine-in order.")
-        except (ValueError, IndexError):
-            messagebox.showerror("Error", "Could not remove selected item.")
+        # Use index map to find link to order index
+        info = self.tree_index_map.get(selected_id)
+        if not info or 'index' not in info:
+            messagebox.showerror("Error", "Could not map selected item to order.")
+            return
+
+        idx = info.get('index')
+        is_addon = info.get('is_addon', False)
+        if not isinstance(idx, int):
+            return
+
+        # If a parent (product) is selected, remove it and children (addons)
+        if not is_addon:
+            # Remove the product at idx
+            if idx < len(self.order.items):
+                removed_product = self.order.items.pop(idx)
+                # Remove addons that belong to this product
+                while idx < len(self.order.items):
+                    next_item, _ = self.order.items[idx]
+                    if hasattr(next_item, 'addonPrice'):
+                        self.order.items.pop(idx)
+                    else:
+                        break
+                messagebox.showinfo(
+                    "Removed",
+                    f"Removed {getattr(removed_product[0], 'prodName', 'Item')} and its modifiers."
+                )
+        else:
+            # Remove only the selected addon
+            removed_addon = self.order.items.pop(idx)
+            messagebox.showinfo(
+                "Removed",
+                f"Removed {getattr(removed_addon[0], 'addonName', getattr(removed_addon[0], 'prodName', 'Item'))}."
+            )
 
     def _remove_from_carry_out(self):
         """Remove selected item or order from carry-out orders."""
@@ -611,7 +658,7 @@ class RestaurantApp:
         
         if not parent:  # It's a parent (entire carry-out order)
             # Get all children of this order
-            all_orders = self.hold_list.get_children()
+            all_orders = self.hold_list.get_children('')
             try:
                 order_index = all_orders.index(selected_id)
                 if order_index < len(self.held_orders):
@@ -625,9 +672,32 @@ class RestaurantApp:
             except (ValueError, IndexError):
                 messagebox.showerror("Error", "Could not remove selected order.")
         else:
-            # It's a child item - for now just show a message
-            # (Removing individual items from carry-out orders would require more complex logic)
-            messagebox.showinfo("Info", "To modify carry-out orders, please remove the entire order and re-add it.")
+            # Child item - remove specific item from carry-out
+            try:
+                # Link order to child
+                all_orders = self.hold_list.get_children('')
+                order_index = all_orders.index(parent)
+                # Find child index
+                children = self.hold_list.get_children(parent)
+                child_index = children.index(selected_id)
+                # Update data and UI
+                if 0 <= order_index < len(self.held_orders):
+                    order_items = self.held_orders[order_index]
+                    if 0 <= child_index < len(order_items):
+                        removed = order_items.pop(child_index)
+                        self.hold_list.delete(selected_id)
+                        messagebox.showinfo(
+                            "Removed",
+                            f"Removed {getattr(removed[0], 'prodName', getattr(removed[0], 'addonName', 'Item'))} from carry-out order."
+                        )
+                        # If order empty, remove parent too
+                        if not order_items:
+                            self.held_orders.pop(order_index)
+                            self.hold_list.delete(parent)
+                            if not self.held_orders:
+                                self.hold_list.insert('', 'end', text="No carry-out orders yet")
+            except Exception:
+                messagebox.showerror("Error", "Could not remove selected item from carry-out order.")
 
     def update_order_summary(self):
         subtotal = self.order.total()
