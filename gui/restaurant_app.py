@@ -146,6 +146,8 @@ class RestaurantApp:
         self.quantity_entry = None
         self.hold_list = None
         self.activeTree = None
+        self.selected_tree = None  # Track which tree has selection for removal
+        self.selected_item = None  # Track selected item for removal
         self.held_orders = []  # Held orders storage
         self.hold_seq = 1
 
