@@ -529,9 +529,70 @@ class RestaurantApp:
 
     # Someone do this please, there's a commented out centerpanes_selected, as well as a .bind for centerpane, and a func in Order (may or may not be useful)
     def remove_sel_item(self):
-        
+        """Remove the selected item from dine-in order or carry-out orders."""
+        if not hasattr(self, 'selected_tree') or not hasattr(self, 'selected_item'):
+            messagebox.showwarning("No Selection", "Please select an item to remove first.")
+            return
+            
+        if not self.selected_item:
+            messagebox.showwarning("No Selection", "Please select an item to remove first.")
+            return
+            
+        if self.selected_tree == self.order_tree:
+            # Remove from dine-in order
+            self._remove_from_dine_in()
+        elif self.selected_tree == self.hold_list:
+            # Remove from carry-out orders
+            self._remove_from_carry_out()
+            
         self.update_order_tree()
         self.update_order_summary()
+
+    def _remove_from_dine_in(self):
+        """Remove selected item from the dine-in order."""
+        if not self.order.items:
+            return
+            
+        # Get the index of the selected item in the tree
+        selected_id = self.selected_item[0]
+        all_items = self.order_tree.get_children()
+        
+        # Find the index of the selected item
+        try:
+            item_index = all_items.index(selected_id)
+            # Remove the item from the order
+            if item_index < len(self.order.items):
+                removed_item = self.order.items.pop(item_index)
+                messagebox.showinfo("Removed", f"Removed {getattr(removed_item[0], 'prodName', getattr(removed_item[0], 'addonName', 'Item'))} from dine-in order.")
+        except (ValueError, IndexError):
+            messagebox.showerror("Error", "Could not remove selected item.")
+
+    def _remove_from_carry_out(self):
+        """Remove selected item or order from carry-out orders."""
+        selected_id = self.selected_item[0]
+        
+        # Check if it's a parent (order) or child (item)
+        parent = self.hold_list.parent(selected_id)
+        
+        if not parent:  # It's a parent (entire carry-out order)
+            # Get all children of this order
+            all_orders = self.hold_list.get_children()
+            try:
+                order_index = all_orders.index(selected_id)
+                if order_index < len(self.held_orders):
+                    self.held_orders.pop(order_index)
+                    self.hold_list.delete(selected_id)
+                    messagebox.showinfo("Removed", "Removed carry-out order.")
+                    
+                    # If no more orders, show placeholder
+                    if not self.held_orders:
+                        self.hold_list.insert('', 'end', text="No carry-out orders yet")
+            except (ValueError, IndexError):
+                messagebox.showerror("Error", "Could not remove selected order.")
+        else:
+            # It's a child item - for now just show a message
+            # (Removing individual items from carry-out orders would require more complex logic)
+            messagebox.showinfo("Info", "To modify carry-out orders, please remove the entire order and re-add it.")
 
     def update_order_summary(self):
         subtotal = self.order.total()
