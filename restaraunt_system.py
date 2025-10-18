@@ -29,7 +29,7 @@ errorSeverity=["Debug Only Error", "Critical Error", "Error", "Invalid Input"] #
 # Classes
 class Product:
     # Addon class refers to things slightly differently! Be careful!
-    def __init__(self, id, name, desc, price, stock, sales, basedOn, presetAddons, validAddons, imgPath, imgSmallPath):
+    def __init__(self, id, name, desc, price, stock, sales, basedOn, presetAddons, validAddons, imgPath, imgSmallPath, category):
         self.prodID = int(id)
         self.prodName = str(name)
         self.prodDesc = str(desc)
@@ -44,6 +44,7 @@ class Product:
             self.prodBasedOn = int(basedOn) # Int type is optimal!
         except:
             self.prodBasedOn = basedOn # Just set it to an empty string instead if it cant set it to an int.
+        self.prodCategory = str(category)
 
 class Addon:
     # We refer to things in here the same as Product, but instead of prod-, it's addon-!
@@ -106,7 +107,7 @@ class InventoryHandler:
     def makeNewProduct(self, passedDict, mode):
         # We make a new Product class object
         if mode == "Product":
-            newProduct = Product(passedDict['prodID'], passedDict['prodName'], passedDict['prodDesc'], passedDict['prodPrice'], passedDict['prodStock'], passedDict['prodSales'], passedDict['prodBasedOn'], passedDict['prodPresetAddons'], passedDict['prodValidAddons'], passedDict['prodImg'], passedDict['prodImgSmall'])
+            newProduct = Product(passedDict['prodID'], passedDict['prodName'], passedDict['prodDesc'], passedDict['prodPrice'], passedDict['prodStock'], passedDict['prodSales'], passedDict['prodBasedOn'], passedDict['prodPresetAddons'], passedDict['prodValidAddons'], passedDict['prodImg'], passedDict['prodImgSmall'], passedDict['prodCategory'])
             self.productList.append(newProduct)
         elif mode == "Addon":
             newAddon = Addon(passedDict['prodID'], passedDict['prodName'], passedDict['prodDesc'], passedDict['prodPrice'], passedDict['prodStock'], passedDict['prodSales'], passedDict['prodImg'], passedDict['prodImgSmall'])
