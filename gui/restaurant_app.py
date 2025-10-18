@@ -494,6 +494,12 @@ class RestaurantApp:
                         a = int(a) # We would've errored out (returned) in the previous check to see if we had stock, so we can just do it here.
                         item = self.backend.get_addon(a)
                         self.commit_add_to_cart(item, 1, 'Addon')
+            # Reset qty field after adding
+            try:
+                if self.quantity_entry is not None:
+                    self.quantity_entry.delete(1, 'end')
+            except Exception:
+                pass
                     
         else:
             self.add_mod()
