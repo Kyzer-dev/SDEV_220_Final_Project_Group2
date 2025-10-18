@@ -291,11 +291,11 @@ class RestaurantApp:
         qty_frame = tk.Frame(left_frame, pady=5)
         qty_frame.pack(fill='x')
         ttk.Label(qty_frame, text="Qty:").pack(side='left')
-        self.quantity_entry = ttk.Entry(qty_frame, width=6)
+        self.quantity_entry = ttk.Entry(qty_frame, width=3)
         self.quantity_entry.insert(0, "1")
         self.quantity_entry.pack(side='left', padx=4)
-        ttk.Button(qty_frame, text="Add to Dine-In", command=self.add_to_order, width=16).pack(side='left', padx=8)
-        ttk.Button(qty_frame, text="Add to Carry-Out", command=self.hold_order, width=16).pack(side='left', padx=8)
+        ttk.Button(qty_frame, text="Add to Dine-In", command=self.add_to_order, width=12).pack(side='left', padx=6)
+        ttk.Button(qty_frame, text="Add to Carry-Out", command=self.hold_order, width=16).pack(side='left', padx=6)
 
         self.menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
         
