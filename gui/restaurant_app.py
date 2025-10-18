@@ -191,6 +191,10 @@ class RestaurantApp:
         self.held_orders = []  # Held orders storage
         self.hold_seq = 1
 
+        # Keep parent open state
+        self.tree_index_map: dict[str, dict[str, int | bool]] = {}
+        self.open_parent_indices: set[int] = set()
+
         self.subtotal_var = tk.StringVar(value="Subtotal: $0.00")
         self.tax_var = tk.StringVar(value="Tax: $0.00")
         self.total_var = tk.StringVar(value="Total: $0.00")
