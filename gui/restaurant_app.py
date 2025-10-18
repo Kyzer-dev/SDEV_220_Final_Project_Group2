@@ -612,10 +612,26 @@ class RestaurantApp:
 
     def _remove_from_dine_in(self):
         """Remove selected item from the dine-in order."""
-        if not self.order.items or not self.selected_item:
+        if not self.order.items:
             return
+        
+        selected_id = None
+        try:
+            if self.order_tree is not None:
+                sel = self.order_tree.selection()
+                if sel:
+                    selected_id = sel[0]
+                else:
+                    focus = self.order_tree.focus()
+                    if focus:
+                        selected_id = focus
+        except Exception:
+            pass
 
-        selected_id = self.selected_item[0]
+        if not selected_id and self.selected_item:
+            selected_id = self.selected_item[0]
+        if not selected_id:
+            return
         # Use index map to find link to order index
         info = self.tree_index_map.get(selected_id)
         if not info or 'index' not in info:
@@ -641,7 +657,7 @@ class RestaurantApp:
                         break
                 messagebox.showinfo(
                     "Removed",
-                    f"Removed {getattr(removed_product[0], 'prodName', 'Item')} and its modifiers."
+                    f"Removed {getattr(removed_product[0], 'prodName', 'Item')} and its addons."
                 )
         else:
             # Remove only the selected addon
