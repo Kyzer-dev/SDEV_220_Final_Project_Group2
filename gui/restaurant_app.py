@@ -32,38 +32,33 @@ class BackendAdapter:
         self.handler.loadDataFile(defaultProductFile, "Product")
         self.handler.loadDataFile(defaultAddonFile, "Addon")
 
-    def get_product(self, pid: int, val = 'prodID', searchFor = 'UNSET'):
+    def get_product(self, pid: int, val: str = 'prodID', searchFor: str = 'UNSET'):
         for p in self.handler.productList:
             if getattr(p, val, None) == pid:
                 if searchFor != 'UNSET':
-                    desiredValue = getattr(p, searchFor)
-                    return desiredValue
-                else:
-                    return p
+                    return getattr(p, searchFor)
+                return p
         return None
-    
-    def get_addon(self, aid: int, val = 'addonID'):
+
+    def get_addon(self, aid: int, val: str = 'addonID'):
         for a in self.handler.addonList:
             if getattr(a, val, None) == aid:
                 return a
         return None
 
     def reduce_stock(self, pid: int, qty: int) -> bool:
-        # Negative reduces stock; InventoryHandler handles bounds
+        # Negative reduces stock; InventoryHandler enforces bounds
         return self.handler.updateStock(pid, -qty)
 
     def reduce_addon_stock(self, aid: int, qty: int) -> bool:
-        """Reduce addon stock by the specified quantity."""
+        # Mirror reduce_stock for addons list (since InventoryHandler tracks both)
         for addon in self.handler.addonList:
-            if addon.addonID == aid:
-                new_stock = addon.addonStock - qty
+            if getattr(addon, 'addonID', None) == aid:
+                new_stock = getattr(addon, 'addonStock', 0) - qty
                 if new_stock < 0:
-                    print(f"Not enough addon stock for {addon.addonName}.")
                     return False
                 addon.addonStock = new_stock
-                print(f"Updated {addon.addonName} addon stock to {addon.addonStock}.")
                 return True
-        print(f"Addon ID {aid} not found.")
         return False
 
     def save_products(self) -> bool:
@@ -190,6 +185,7 @@ class RestaurantApp:
         self.selected_item = None  # Track selected item for removal
         self.held_orders = []  # Held orders storage
         self.hold_seq = 1
+        self.order_sent_to_kitchen = False
 
         # Keep parent open state
         self.tree_index_map: dict[str, dict[str, int | bool]] = {}
@@ -730,6 +726,9 @@ class RestaurantApp:
         if not self.order.items:
             messagebox.showinfo("Empty", "No items in order.")
             return
+        if not getattr(self, 'order_sent_to_kitchen', False):
+            messagebox.showinfo("Kitchen", "Send the order to the kitchen before checkout.")
+            return
         subtotal = self.order.total()
         tax = subtotal * self.TAX_RATE
         total = subtotal + tax
@@ -741,12 +740,6 @@ class RestaurantApp:
         ttk.Label(win, text="Confirm checkout? This will reduce stock.").pack(anchor='w')
 
         def confirm():
-            for p, q in self.order.items:
-                pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
-                if pid_val is not None:
-                    self.backend.reduce_stock(pid_val, q)
-                self.backend.save_products()
-
             # Calculate subtotal and tax
             subtotal = self.order.total()
             tax = subtotal * self.TAX_RATE
@@ -770,8 +763,9 @@ class RestaurantApp:
             
             self.refresh_products()
             self.refresh_stock_display()
-            messagebox.showinfo("Done", "Order checked out. Stock updated.")
+            messagebox.showinfo("Done", "Order checked out.")
             self.order = AppOrder()
+            self.order_sent_to_kitchen = False
             self.update_order_tree()
             self.update_order_summary()
             win.destroy()
@@ -839,12 +833,10 @@ class RestaurantApp:
         self.refresh_products()
         self.refresh_stock_display()
         
-        # Clear the order and update UI
-        self.order = AppOrder()
+        self.order_sent_to_kitchen = True
         self.update_order_tree()
         self.update_order_summary()
-        
-        messagebox.showinfo("Kitchen", "Order sent to kitchen! Stock updated.")
+        messagebox.showinfo("Kitchen", "Order sent to kitchen! Stock updated. Proceed to checkout.")
 
     def hold_order(self):
         if self.order.items:
