@@ -1,22 +1,12 @@
 # Restaurant Ordering System
 ### SDEV_220_Final_Project_Group2
 
-Course project: loads a text "database" of menu items and gives you a basic ordering GUI.
+Course project: This program loads a text "database" of menu items and gives you a basic ordering GUI. You can choose between the modern GUI that uses CustomTkinter or the classic GUI that uses Tkinter.
 
-This version of the application uses the CustomTkinter python library, you can find the documentation and more information about CustomTkinter here: https://customtkinter.tomschimansky.com/
+![GUI Version Selection photo](Images\gui-version-selection.png)
 
-View the Github page here: https://github.com/tomschimansky/customtkinter
 
-If Customtkinter is not installed or does not run properly, the application will attempt to run using the default tkinter library.
-
-Light Mode
-![Restaurant Ordering System photo (Light Mode)](restaurant-ordering-system-lm.png)
-
-Dark Mode
-![Restaurant Ordering System photo (Dark Mode)](restaurant-ordering-system-dm.png)
-
-tkinter version
-![Restaurant Ordering System photo (tkinter version)](restaurant-ordering-system-tk.png)
+To use the CustomTkinter version of the application you must install the CustomTkinter python library. Installation instructions can be found below:
 
 ## Install CustomTkinter library with pip:
 
@@ -30,6 +20,21 @@ pip install customtkinter
 pip install customtkinter --upgrade
 ```
 
+View the documentation and more information about CustomTkinter here: https://customtkinter.tomschimansky.com/
+
+View the Github page here: https://github.com/tomschimansky/customtkinter
+
+If Customtkinter is not installed or does not run properly, the application will attempt to run using the default tkinter library.
+
+Light Mode
+![Restaurant Ordering System photo (Light Mode)](Images\restaurant-ordering-system-lm.png)
+
+Dark Mode
+![Restaurant Ordering System photo (Dark Mode)](Images\restaurant-ordering-system-dm.png)
+
+tkinter version
+![Restaurant Ordering System photo (tkinter version)](Images\restaurant-ordering-system-tk.png)
+
 ## Run the GUI
 
 ```powershell
@@ -41,6 +46,16 @@ python main.py
 
 ```powershell
 python main.py --cli
+```
+## Run Tkinter version
+
+```powershell
+python main.py --tk
+```
+## Run CustomTkinter version
+
+```powershell
+python main.py --ctk
 ```
 
 ## If stuff breaks

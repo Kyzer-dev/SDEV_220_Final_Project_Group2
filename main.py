@@ -88,6 +88,7 @@ def run_tkinter_gui():
     
     root.minsize(1050, 600)
     root.mainloop()
+    return True
     
 def run_customtkinter_gui():
     """Launch the CustomTkinter GUI. If CustomTkinter is not available, attempt to run the Tkinter GUI."""
