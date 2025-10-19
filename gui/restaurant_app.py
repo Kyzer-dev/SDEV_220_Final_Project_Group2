@@ -32,38 +32,33 @@ class BackendAdapter:
         self.handler.loadDataFile(defaultProductFile, "Product")
         self.handler.loadDataFile(defaultAddonFile, "Addon")
 
-    def get_product(self, pid: int, val = 'prodID', searchFor = 'UNSET'):
+    def get_product(self, pid: int, val: str = 'prodID', searchFor: str = 'UNSET'):
         for p in self.handler.productList:
             if getattr(p, val, None) == pid:
                 if searchFor != 'UNSET':
-                    desiredValue = getattr(p, searchFor)
-                    return desiredValue
-                else:
-                    return p
+                    return getattr(p, searchFor)
+                return p
         return None
-    
-    def get_addon(self, aid: int, val = 'addonID'):
+
+    def get_addon(self, aid: int, val: str = 'addonID'):
         for a in self.handler.addonList:
             if getattr(a, val, None) == aid:
                 return a
         return None
 
     def reduce_stock(self, pid: int, qty: int) -> bool:
-        # Negative reduces stock; InventoryHandler handles bounds
+        # Negative reduces stock; InventoryHandler enforces bounds
         return self.handler.updateStock(pid, -qty)
 
     def reduce_addon_stock(self, aid: int, qty: int) -> bool:
-        """Reduce addon stock by the specified quantity."""
+        # Mirror reduce_stock for addons list (since InventoryHandler tracks both)
         for addon in self.handler.addonList:
-            if addon.addonID == aid:
-                new_stock = addon.addonStock - qty
+            if getattr(addon, 'addonID', None) == aid:
+                new_stock = getattr(addon, 'addonStock', 0) - qty
                 if new_stock < 0:
-                    print(f"Not enough addon stock for {addon.addonName}.")
                     return False
                 addon.addonStock = new_stock
-                print(f"Updated {addon.addonName} addon stock to {addon.addonStock}.")
                 return True
-        print(f"Addon ID {aid} not found.")
         return False
 
     def save_products(self) -> bool:
@@ -190,6 +185,11 @@ class RestaurantApp:
         self.selected_item = None  # Track selected item for removal
         self.held_orders = []  # Held orders storage
         self.hold_seq = 1
+        self.order_sent_to_kitchen = False
+
+        # Keep parent open state
+        self.tree_index_map: dict[str, dict[str, int | bool]] = {}
+        self.open_parent_indices: set[int] = set()
 
         self.subtotal_var = tk.StringVar(value="Subtotal: $0.00")
         self.tax_var = tk.StringVar(value="Tax: $0.00")
@@ -287,11 +287,11 @@ class RestaurantApp:
         qty_frame = tk.Frame(left_frame, pady=5)
         qty_frame.pack(fill='x')
         ttk.Label(qty_frame, text="Qty:").pack(side='left')
-        self.quantity_entry = ttk.Entry(qty_frame, width=6)
+        self.quantity_entry = ttk.Entry(qty_frame, width=3)
         self.quantity_entry.insert(0, "1")
         self.quantity_entry.pack(side='left', padx=4)
-        ttk.Button(qty_frame, text="Add to Dine-In", command=self.add_to_order, width=16).pack(side='left', padx=8)
-        ttk.Button(qty_frame, text="Add to Carry-Out", command=self.hold_order, width=16).pack(side='left', padx=8)
+        ttk.Button(qty_frame, text="Add to Dine-In", command=self.add_to_order, width=12).pack(side='left', padx=6)
+        ttk.Button(qty_frame, text="Add to Carry-Out", command=self.hold_order, width=16).pack(side='left', padx=6)
 
         self.menu_tree.bind("<<TreeviewSelect>>", self.tree_selected)
         
@@ -446,17 +446,17 @@ class RestaurantApp:
         if not selection:
             messagebox.showwarning("No Selection", "Please select a menu item first.")
             return
-        try:
-            assert self.quantity_entry is not None, "Quantity entry not initialized"
-            qty = int(self.quantity_entry.get())
-            if qty <= 0:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
-            return
         item_vals = self.activeTree.item(selection[0], 'values')
         iid = int(item_vals[0])
         if self.activeTree == self.menu_tree:
+            try:
+                assert self.quantity_entry is not None, "Quantity entry not initialized"
+                qty = int(self.quantity_entry.get())
+                if qty <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
+                return
             item = self.backend.get_product(iid)
             if not item:
                 messagebox.showerror("Error", "Product not found.")
@@ -494,17 +494,16 @@ class RestaurantApp:
                         a = int(a) # We would've errored out (returned) in the previous check to see if we had stock, so we can just do it here.
                         item = self.backend.get_addon(a)
                         self.commit_add_to_cart(item, 1, 'Addon')
+            # Reset qty field after adding
+            try:
+                if self.quantity_entry is not None:
+                    self.quantity_entry.delete(1, 'end')
+            except Exception:
+                pass
                     
         else:
-            item = self.backend.get_addon(iid)
-            if not item:
-                messagebox.showerror("Error", "Product not found.")
-                return
-            current_stock = getattr(item, 'addonStock', 0)
-            if current_stock < qty:
-                messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
-                return
-            self.commit_add_to_cart(item, qty, 'Addon')
+            self.add_mod()
+            return
         
     def commit_add_to_cart(self, item, qty = 1, itemType = 'Product'):
         self.order.add_item(item, qty, itemType)
@@ -519,14 +518,6 @@ class RestaurantApp:
         if not selection:
             messagebox.showwarning("No Selection", "Please select an addon/mod first.")
             return
-        try:
-            assert self.quantity_entry is not None, "Quantity entry not initialized"
-            qty = int(self.quantity_entry.get())
-            if qty <= 0:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
-            return
         item_vals = self.addon_menu_tree.item(selection[0], 'values')
         try:
             aid = int(item_vals[0])
@@ -538,29 +529,55 @@ class RestaurantApp:
             messagebox.showerror("Error", "Addon not found.")
             return
         current_stock = getattr(addon, 'addonStock', 0)
-        if current_stock < qty:
-            messagebox.showinfo("Out of Stock", f"Only {current_stock} left in stock.")
+        if current_stock < 1:
+            messagebox.showinfo("Out of Stock", f"No stock left for {getattr(addon, 'addonName', 'Addon')}")
             return
-        self.commit_add_to_cart(addon, qty, 'Addon')
+        self.commit_add_to_cart(addon, 1, 'Addon')
 
     def update_order_tree(self):
         if not self.order_tree:
             return
+        # Preserve open parents
+        prev_open_ids: set[int] = set()
+        try:
+            for iid in self.order_tree.get_children(''):
+                if self.order_tree.item(iid, 'open'):
+                    info = self.tree_index_map.get(iid)
+                    if info and not info.get('is_addon', False):
+                        idx = info.get('index')
+                        if isinstance(idx, int) and 0 <= idx < len(self.order.items):
+                            obj = self.order.items[idx][0]
+                            prev_open_ids.add(id(obj))
+        except Exception:
+            pass
+
+        # Rebuild
         for row in self.order_tree.get_children():
             self.order_tree.delete(row)
-        # Build simple hierarchy for products and their addons
-        parent_id = None
-        for item, q in self.order.items:
+        self.tree_index_map = {}
+        parent_id: Optional[str] = None
+        parent_index: Optional[int] = None
+        for idx, (item, q) in enumerate(self.order.items):
             is_addon = hasattr(item, 'addonPrice')
             price_val = getattr(item, 'prodPrice', getattr(item, 'addonPrice', 0.0))
             name_val = getattr(item, 'prodName', getattr(item, 'addonName', 'Item'))
             subtotal = price_val * q
             if not is_addon:
                 parent_id = self.order_tree.insert('', 'end', text=name_val, values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+                parent_index = idx
+                # map parent
+                self.tree_index_map[parent_id] = {'index': idx, 'is_addon': False}
+                # Restore open state
+                try:
+                    if id(item) in prev_open_ids:
+                        self.order_tree.item(parent_id, open=True)
+                except Exception:
+                    pass
             else:
-                # Indent addons under the last product
+                # Indent addons under the last product (if present)
                 parent = parent_id if parent_id else ''
-                self.order_tree.insert(parent, 'end', text=f"+ {name_val}", values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+                child_id = self.order_tree.insert(parent, 'end', text=f"+ {name_val}", values=(q, f"${price_val:.2f}", f"${subtotal:.2f}"))
+                self.tree_index_map[child_id] = {'index': idx, 'is_addon': True}
 
     def remove_last_item(self):
         self.order.remove_last_item()
@@ -570,20 +587,21 @@ class RestaurantApp:
     # Someone do this please, there's a commented out centerpanes_selected, as well as a .bind for centerpane, and a func in Order (may or may not be useful)
     def remove_sel_item(self):
         """Remove the selected item from dine-in order or carry-out orders."""
-        if not hasattr(self, 'selected_tree') or not hasattr(self, 'selected_item'):
-            messagebox.showwarning("No Selection", "Please select an item to remove first.")
-            return
-            
-        if not self.selected_item:
-            messagebox.showwarning("No Selection", "Please select an item to remove first.")
-            return
-            
-        if self.selected_tree == self.order_tree:
-            # Remove from dine-in order
+        if self.order_tree is not None and self.order_tree.selection():
             self._remove_from_dine_in()
-        elif self.selected_tree == self.hold_list:
-            # Remove from carry-out orders
+        elif self.hold_list is not None and self.hold_list.selection():
             self._remove_from_carry_out()
+        else:
+            if not hasattr(self, 'selected_item') or not self.selected_item:
+                messagebox.showwarning("No Selection", "Please select an item to remove first.")
+                return
+            if self.selected_tree == self.order_tree:
+                self._remove_from_dine_in()
+            elif self.selected_tree == self.hold_list:
+                self._remove_from_carry_out()
+            else:
+                messagebox.showwarning("No Selection", "Please select an item to remove first.")
+                return
             
         self.update_order_tree()
         self.update_order_summary()
@@ -592,20 +610,58 @@ class RestaurantApp:
         """Remove selected item from the dine-in order."""
         if not self.order.items:
             return
-            
-        # Get the index of the selected item in the tree
-        selected_id = self.selected_item[0]
-        all_items = self.order_tree.get_children()
         
-        # Find the index of the selected item
+        selected_id = None
         try:
-            item_index = all_items.index(selected_id)
-            # Remove the item from the order
-            if item_index < len(self.order.items):
-                removed_item = self.order.items.pop(item_index)
-                messagebox.showinfo("Removed", f"Removed {getattr(removed_item[0], 'prodName', getattr(removed_item[0], 'addonName', 'Item'))} from dine-in order.")
-        except (ValueError, IndexError):
-            messagebox.showerror("Error", "Could not remove selected item.")
+            if self.order_tree is not None:
+                sel = self.order_tree.selection()
+                if sel:
+                    selected_id = sel[0]
+                else:
+                    focus = self.order_tree.focus()
+                    if focus:
+                        selected_id = focus
+        except Exception:
+            pass
+
+        if not selected_id and self.selected_item:
+            selected_id = self.selected_item[0]
+        if not selected_id:
+            return
+        # Use index map to find link to order index
+        info = self.tree_index_map.get(selected_id)
+        if not info or 'index' not in info:
+            messagebox.showerror("Error", "Could not map selected item to order.")
+            return
+
+        idx = info.get('index')
+        is_addon = info.get('is_addon', False)
+        if not isinstance(idx, int):
+            return
+
+        # If a parent (product) is selected, remove it and children (addons)
+        if not is_addon:
+            # Remove the product at idx
+            if idx < len(self.order.items):
+                removed_product = self.order.items.pop(idx)
+                # Remove addons that belong to this product
+                while idx < len(self.order.items):
+                    next_item, _ = self.order.items[idx]
+                    if hasattr(next_item, 'addonPrice'):
+                        self.order.items.pop(idx)
+                    else:
+                        break
+                messagebox.showinfo(
+                    "Removed",
+                    f"Removed {getattr(removed_product[0], 'prodName', 'Item')} and its addons."
+                )
+        else:
+            # Remove only the selected addon
+            removed_addon = self.order.items.pop(idx)
+            messagebox.showinfo(
+                "Removed",
+                f"Removed {getattr(removed_addon[0], 'addonName', getattr(removed_addon[0], 'prodName', 'Item'))}."
+            )
 
     def _remove_from_carry_out(self):
         """Remove selected item or order from carry-out orders."""
@@ -616,7 +672,7 @@ class RestaurantApp:
         
         if not parent:  # It's a parent (entire carry-out order)
             # Get all children of this order
-            all_orders = self.hold_list.get_children()
+            all_orders = self.hold_list.get_children('')
             try:
                 order_index = all_orders.index(selected_id)
                 if order_index < len(self.held_orders):
@@ -630,9 +686,32 @@ class RestaurantApp:
             except (ValueError, IndexError):
                 messagebox.showerror("Error", "Could not remove selected order.")
         else:
-            # It's a child item - for now just show a message
-            # (Removing individual items from carry-out orders would require more complex logic)
-            messagebox.showinfo("Info", "To modify carry-out orders, please remove the entire order and re-add it.")
+            # Child item - remove specific item from carry-out
+            try:
+                # Link order to child
+                all_orders = self.hold_list.get_children('')
+                order_index = all_orders.index(parent)
+                # Find child index
+                children = self.hold_list.get_children(parent)
+                child_index = children.index(selected_id)
+                # Update data and UI
+                if 0 <= order_index < len(self.held_orders):
+                    order_items = self.held_orders[order_index]
+                    if 0 <= child_index < len(order_items):
+                        removed = order_items.pop(child_index)
+                        self.hold_list.delete(selected_id)
+                        messagebox.showinfo(
+                            "Removed",
+                            f"Removed {getattr(removed[0], 'prodName', getattr(removed[0], 'addonName', 'Item'))} from carry-out order."
+                        )
+                        # If order empty, remove parent too
+                        if not order_items:
+                            self.held_orders.pop(order_index)
+                            self.hold_list.delete(parent)
+                            if not self.held_orders:
+                                self.hold_list.insert('', 'end', text="No carry-out orders yet")
+            except Exception:
+                messagebox.showerror("Error", "Could not remove selected item from carry-out order.")
 
     def update_order_summary(self):
         subtotal = self.order.total()
@@ -647,6 +726,9 @@ class RestaurantApp:
         if not self.order.items:
             messagebox.showinfo("Empty", "No items in order.")
             return
+        if not getattr(self, 'order_sent_to_kitchen', False):
+            messagebox.showinfo("Kitchen", "Send the order to the kitchen before checkout.")
+            return
         subtotal = self.order.total()
         tax = subtotal * self.TAX_RATE
         total = subtotal + tax
@@ -658,12 +740,6 @@ class RestaurantApp:
         ttk.Label(win, text="Confirm checkout? This will reduce stock.").pack(anchor='w')
 
         def confirm():
-            for p, q in self.order.items:
-                pid_val = getattr(p, 'prodID', getattr(p, 'id', None))
-                if pid_val is not None:
-                    self.backend.reduce_stock(pid_val, q)
-                self.backend.save_products()
-
             # Calculate subtotal and tax
             subtotal = self.order.total()
             tax = subtotal * self.TAX_RATE
@@ -687,8 +763,9 @@ class RestaurantApp:
             
             self.refresh_products()
             self.refresh_stock_display()
-            messagebox.showinfo("Done", "Order checked out. Stock updated.")
+            messagebox.showinfo("Done", "Order checked out.")
             self.order = AppOrder()
+            self.order_sent_to_kitchen = False
             self.update_order_tree()
             self.update_order_summary()
             win.destroy()
@@ -756,49 +833,66 @@ class RestaurantApp:
         self.refresh_products()
         self.refresh_stock_display()
         
-        # Clear the order and update UI
-        self.order = AppOrder()
+        self.order_sent_to_kitchen = True
         self.update_order_tree()
         self.update_order_summary()
-        
-        messagebox.showinfo("Kitchen", "Order sent to kitchen! Stock updated.")
+        messagebox.showinfo("Kitchen", "Order sent to kitchen! Stock updated. Proceed to checkout.")
 
     def hold_order(self):
-        if not self.order.items:
-            messagebox.showinfo("Carry-Out", "No items to add to Carry-Out.")
+        if self.order.items:
+            messagebox.showinfo("Carry-Out", "Finish or clear Dine-In before adding to Carry-Out.")
             return
-        # Build a short summary note
-        subtotal = self.order.total()
-        note = f"Carry-Out Order #{self.hold_seq}: {len(self.order.items)} items, ${subtotal:.2f}"
+
+        # Require a selected product
+        if not self.menu_tree:
+            return
+        sel = self.menu_tree.selection()
+        if not sel:
+            messagebox.showwarning("No Selection", "Select a product to add to Carry-Out.")
+            return
+        vals = self.menu_tree.item(sel[0], 'values')
+        try:
+            pid = int(vals[0])
+        except Exception:
+            messagebox.showerror("Error", "Could not read product ID.")
+            return
+        prod = self.backend.get_product(pid)
+        if not prod:
+            messagebox.showerror("Error", "Product not found.")
+            return
+        try:
+            qty = int(self.quantity_entry.get()) if self.quantity_entry else 1
+            if qty <= 0:
+                raise ValueError
+        except Exception:
+            messagebox.showerror("Bad Quantity", "Enter a positive whole number for quantity.")
+            return
+        stock = getattr(prod, 'prodStock', 0)
+        if stock < qty:
+            messagebox.showinfo("Out of Stock", f"Only {stock} left in stock.")
+            return
+
         try:
             if self.hold_list is not None:
                 children = self.hold_list.get_children()
                 if children:
-                    first_vals = self.hold_list.item(children[0], 'values')
-                    if not first_vals:
-                        first_text = self.hold_list.item(children[0], 'text')
-                        if first_text == "No carry-out orders yet":
-                            self.hold_list.delete(children[0])
+                    if self.hold_list.item(children[0], 'text') == "No carry-out orders yet":
+                        self.hold_list.delete(children[0])
         except Exception:
             pass
-        # Insert into Hold(Carry-Out) list as a parent row, add item as a child
+
+        # Create carry-out order
+        price_val = getattr(prod, 'prodPrice', 0.0)
+        subtotal = price_val * qty
+        note = f"Carry-Out Order #{self.hold_seq}: 1 items, ${subtotal:.2f}"
         parent = None
         if self.hold_list is not None:
             parent = self.hold_list.insert('', 'end', text=note)
-            # Add each item as a child row
-            for p, q in self.order.items:
-                price_val = getattr(p, 'prodPrice', getattr(p, 'addonPrice', 0.0))
-                name_val = getattr(p, 'prodName', getattr(p, 'addonName', 'Item'))
-                is_addon = hasattr(p, 'addonPrice')
-                label = f"+ {name_val}" if is_addon else name_val
-                self.hold_list.insert(parent, 'end', text=f"{label} x{q} @ ${price_val:.2f}")
-        self.held_orders.append(list(self.order.items))
+            name_val = getattr(prod, 'prodName', 'Item')
+            self.hold_list.insert(parent, 'end', text=f"{name_val} x{qty} @ ${price_val:.2f}")
+        self.held_orders.append([(prod, qty)])
         self.hold_seq += 1
-        # Clear current order UI
-        self.order = AppOrder()
-        self.update_order_tree()
-        self.update_order_summary()
-        messagebox.showinfo("Carry-Out", "Order moved to queue.")
+        messagebox.showinfo("Carry-Out", "Added to carry-out queue.")
 
     def cancel_order(self):
         if not self.order.items:
