@@ -3,7 +3,7 @@
 
 Course project: This program loads a text "database" of menu items and gives you a basic ordering GUI. You can choose between the modern GUI that uses CustomTkinter or the classic GUI that uses Tkinter.
 
-![GUI Version Selection photo](Images\gui-version-selection.png)
+![GUI Version Selection photo](Images/gui-version-selection.png)
 
 
 To use the CustomTkinter version of the application you must install the CustomTkinter python library. Installation instructions can be found below:
@@ -27,13 +27,13 @@ View the Github page here: https://github.com/tomschimansky/customtkinter
 If Customtkinter is not installed or does not run properly, the application will attempt to run using the default tkinter library.
 
 Light Mode
-![Restaurant Ordering System photo (Light Mode)](Images\restaurant-ordering-system-lm.png)
+![Restaurant Ordering System photo (Light Mode)](Images/restaurant-ordering-system-lm.png)
 
 Dark Mode
-![Restaurant Ordering System photo (Dark Mode)](Images\restaurant-ordering-system-dm.png)
+![Restaurant Ordering System photo (Dark Mode)](Images/restaurant-ordering-system-dm.png)
 
 tkinter version
-![Restaurant Ordering System photo (tkinter version)](Images\restaurant-ordering-system-tk.png)
+![Restaurant Ordering System photo (tkinter version)](Images/restaurant-ordering-system-tk.png)
 
 ## Run the GUI
 
